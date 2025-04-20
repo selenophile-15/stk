@@ -21,7 +21,7 @@
       padding: 20px;
       margin-top: 20px;
     }
-    input, textarea, select, button {
+    input, textarea, button {
       width: 100%;
       padding: 10px;
       margin-top: 10px;
@@ -44,162 +44,69 @@
       border-radius: 10px;
       padding: 15px;
       margin-top: 15px;
+    }
+    .post .name {
+      font-weight: bold;
+      font-size: 1.1rem;
+    }
+    .post .bookmark {
+      color: gold;
       cursor: pointer;
-    }
-    .back-button {
-      background: none;
-      color: white;
-      font-size: 1.2rem;
-      border: none;
-      cursor: pointer;
-      margin-bottom: 10px;
-    }
-    .comment-box {
-      margin-top: 20px;
-    }
-    .comment {
-      background: #444;
-      border-radius: 8px;
-      margin-top: 10px;
-      display: flex;
-      justify-content: space-between;
-      align-items: center;
-    }
-    .comment-content {
-      padding: 10px;
-      flex: 1;
-    }
-    .delete-btn {
-      width: 40px;
-      height: 100%;
-      background-color: #6a0dad;
-      color: white;
-      border: none;
-      border-left: 1px solid #222;
-      cursor: pointer;
-      border-radius: 0 8px 8px 0;
+      margin-left: 8px;
     }
     .small-text {
       font-size: 0.8rem;
       color: #ccc;
       margin-top: 5px;
     }
-	textarea#message {
-      font-family: 'Arial', sans-serif;
-      background-color: #3a3a4d;
-      color: white;
-      border: 1px solid #555;
-      border-radius: 8px;
-      resize: vertical;
-	}
-    .guild-name {
-      display: inline-block; /* 이름과 북마크 아이콘을 같은 줄에 표시 */
-    }
-
-    .bookmark-icon {
-      background: none;
-      border: none;
-      color: gold;
-      font-size: 1.2em;
-      cursor: pointer;
-      margin-left: 5px; /* 이름과의 간격 조절 */
-    }
   </style>
 </head>
 <body>
-  <div class="container" id="main-view">
-    <button class="back-button" onclick="goBack()">← 뒤로가기</button>
+  <div class="container">
     <div class="card">
       <h2>길드 구해요 게시판</h2>
       <input type="text" id="name" placeholder="이름" />
       <input type="number" id="level" placeholder="레벨" />
       <input type="text" id="investment" placeholder="투자금" />
-      <input type="text" id="royal" placeholder="왕실풀확 상태 (예: 왕실풀확, 왕실, 풀확, 해당사항 없음)" />
-      <input type="text" id="contact" placeholder="연락 방법 (예: 인게임 월챗, 오픈톡 링크 등)" />
-      <textarea id="message" placeholder="하고 싶은 말 (유료 일꾼 구매, 이벤트 점수, 원하는 길드 조건 등 하고 싶은 말 있으면 적으세요)"></textarea>
-      <input type="password" id="postPassword" placeholder="비밀번호 (수정/삭제 시 필요)" />
-      <div class="small-text">
-		하고 싶은 말을 제외한 항목들은 필수 입력 항목이며 하나라도 적지않을 경우 등록할 수 없습니다.<br>
-		글은 5일 동안만 유지되며 기간 만료 시 자동 삭제됩니다.<br>
-		글이 이미 등록된 유저는 삭제를 하지 않는 이상 재등록이 불가하니 본인 글 찾아가 수정 혹은 삭제를 하세요.
-	  </div>
+      <input type="text" id="royal" placeholder="왕실풀확 상태" />
+      <input type="text" id="contact" placeholder="연락 방법" />
+      <textarea id="message" placeholder="하고 싶은 말"></textarea>
       <button onclick="submitPost()">등록</button>
-	  <button onclick="renderPosts()">전체 글 보기</button>
-      <button onclick="renderPosts(true)">북마크한 글 보기</button>
+      <button onclick="renderPosts()">전체 글 보기</button>
+      <button onclick="renderPosts(true)">북마크 보기</button>
+      <div class="small-text">익명으로 저장되며 게시글은 7일간 유지됩니다.</div>
     </div>
     <div id="posts"></div>
   </div>
 
-  <div class="container" id="post-detail-view" style="display:none">
-    <button class="back-button" onclick="goToBoard()">← 게시판으로</button>
-    <div id="post-detail"></div>
-    <div class="card comment-box">
-      <textarea id="new-comment" placeholder="댓글을 입력하세요"></textarea>
-      <button onclick="addComment()">댓글 등록</button>
-    </div>
-    <div id="comments"></div>
-  </div>
+  <script type="module">
+    import { initializeApp } from "https://www.gstatic.com/firebasejs/10.11.0/firebase-app.js";
+    import { getDatabase, ref, set, push, onValue, remove } from "https://www.gstatic.com/firebasejs/10.11.0/firebase-database.js";
+    import { getAuth, signInAnonymously, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/10.11.0/firebase-auth.js";
 
-  <script>
-    let posts = JSON.parse(localStorage.getItem("guildPosts") || "[]");
-    let commentsMap = JSON.parse(localStorage.getItem("guildComments") || "{}");
-    let passwords = JSON.parse(localStorage.getItem("guildPasswords") || "{}");
-    let commentPasswords = JSON.parse(localStorage.getItem("commentPasswords") || "{}");
-	let bookmarks = JSON.parse(localStorage.getItem("guildBookmarks") || "[]");
-    let currentPostId = null;
-	let showOnlyBookmarks = false;
+    const firebaseConfig = {
+      apiKey: "AIzaSyC-jlwSZPIt8aq9Tx2aJ8_0u4f_R7BFxR8",
+      authDomain: "stkguild-b2b17.firebaseapp.com",
+      databaseURL: "https://stkguild-b2b17-default-rtdb.firebaseio.com",
+      projectId: "stkguild-b2b17",
+      appId: "1:483792187181:web:8d1e6401cc6de5aee4eda4",
+    };
 
-    function saveData() {
-      localStorage.setItem("guildPosts", JSON.stringify(posts));
-      localStorage.setItem("guildComments", JSON.stringify(commentsMap));
-      localStorage.setItem("guildPasswords", JSON.stringify(passwords));
-      localStorage.setItem("commentPasswords", JSON.stringify(commentPasswords));
-	  localStorage.setItem("guildBookmarks", JSON.stringify(bookmarks));
-    }
+    const app = initializeApp(firebaseConfig);
+    const db = getDatabase(app);
+    const auth = getAuth(app);
 
-    function renderPosts(bookmarksOnly = false) {
-      showOnlyBookmarks = bookmarksOnly;
-      const now = Date.now();
-      posts = posts.filter(post => now - post.timestamp < 5 * 86400000);
-      saveData();
+    let userId = null;
+    let bookmarks = JSON.parse(localStorage.getItem("guildBookmarks") || "[]");
+    let showBookmarksOnly = false;
 
-      const container = document.getElementById("posts");
-      container.innerHTML = "";
-
-      const filteredPosts = bookmarksOnly ? posts.filter(post => bookmarks.includes(post.id)) : posts;
-
-      [...filteredPosts].reverse().forEach(post => {
-        const commentCount = commentsMap[post.id]?.length || 0;
-        const timeLeft = 5 * 86400000 - (now - post.timestamp);
-        const days = Math.floor(timeLeft / 86400000);
-        const hours = Math.floor((timeLeft % 86400000) / 3600000);
-        const minutes = Math.floor((timeLeft % 3600000) / 60000);
-        const isBookmarked = bookmarks.includes(post.id);
-
-        container.innerHTML += `
-          <div class="post" onclick="openPost('${post.id}')">
-            <div>
-              <div class="guild-name">
-                ${post.name}&nbsp;&nbsp;<span class="bookmark-icon" onclick="toggleBookmark(event, '${post.id}')">${isBookmarked ? '★' : '☆'}</span>
-              </div>
-            </div>
-            <div>레벨: ${post.level} / 투자금: ${post.investment} / ${post.royal}</div>
-                        <div>삭제까지 ${days}일 ${hours}시간 ${minutes}분</div>
-            <div>댓글 ${commentCount}개</div>
-        `;
-      });
-    }
-
-	function toggleBookmark(event, postId) {
-		event.stopPropagation(); // 상위 div의 onclick 이벤트 막기
-		if (bookmarks.includes(postId)) {
-			bookmarks = bookmarks.filter(id => id !== postId);
-		} else {
-			bookmarks.push(postId);
-		}
-		saveData();
-		renderPosts(showOnlyBookmarks);
-	}
+    signInAnonymously(auth);
+    onAuthStateChanged(auth, user => {
+      if (user) {
+        userId = user.uid;
+        renderPosts();
+      }
+    });
 
     function submitPost() {
       const name = document.getElementById("name").value.trim();
@@ -208,141 +115,55 @@
       const royal = document.getElementById("royal").value;
       const contact = document.getElementById("contact").value;
       const message = document.getElementById("message").value;
-      const pw = document.getElementById("postPassword").value;
+      if (!name || !level || !investment || !royal || !contact) return;
 
-      if (!name || !level || !investment || !royal || !contact || !pw) {
-        alert("모든 필수 항목을 입력해주세요.");
-        return;
-      }
-      if (posts.some(p => p.name === name)) {
-        alert("이미 등록된 유저입니다. 기간이 지나고 재신청하세요.");
-        return;
-      }
-      const post = {
-        id: Date.now().toString(),
+      const postData = {
         name, level, investment, royal, contact, message,
-        timestamp: Date.now(),
-		bookmarked: false // 북마크 초기값 설정
+        userId, timestamp: Date.now()
       };
-      posts.push(post);
-      passwords[post.id] = pw;
-	  bookmarks = bookmarks.filter(id => posts.find(post => post.id === id)); // posts에 있는 id만 유지
-      saveData();
-      renderPosts();
+      push(ref(db, "posts"), postData);
     }
 
-    function openPost(id) {
-      currentPostId = id;
-      const post = posts.find(p => p.id === id);
-      document.getElementById("main-view").style.display = "none";
-      document.getElementById("post-detail-view").style.display = "block";
+    function renderPosts(bookmarksOnly = false) {
+      showBookmarksOnly = bookmarksOnly;
+      onValue(ref(db, "posts"), snapshot => {
+        const container = document.getElementById("posts");
+        container.innerHTML = "";
+        const data = snapshot.val();
+        if (!data) return;
 
-      document.getElementById("post-detail").innerHTML = `
-        <div class="card">
-          <div><strong>${post.name}</strong></div>
-          <div>레벨: ${post.level}</div>
-          <div>투자금: ${post.investment}</div>
-          <div>왕실풀확 상태: ${post.royal}</div>
-          <div>연락 방법: ${post.contact}</div>
-          <div>하고싶은 말:<br/>${post.message}</div>
-          <button onclick="editPostForm()">글 수정</button>
-          <button onclick="deletePost()">글 삭제</button>
-        </div>
-      `;
-      renderComments();
-    }
-
-    function editPostForm() {
-      const pw = prompt("글 비밀번호를 입력하세요:");
-      if (pw !== passwords[currentPostId]) {
-        alert("비밀번호가 틀렸습니다.");
-        return;
-      }
-      const post = posts.find(p => p.id === currentPostId);
-      const level = prompt("레벨:", post.level);
-      const investment = prompt("투자금:", post.investment);
-      const royal = prompt("왕실풀확 상태:", post.royal);
-      const contact = prompt("연락 방법:", post.contact);
-      const message = prompt("하고싶은 말:", post.message);
-
-      if (level && investment && royal && contact && message !== null) {
-        post.level = level;
-        post.investment = investment;
-        post.royal = royal;
-        post.contact = contact;
-        post.message = message;
-        saveData();
-        openPost(currentPostId);
-      }
-    }
-
-    function deletePost() {
-      const inputPw = prompt("글 비밀번호를 입력하세요:");
-      if (inputPw === passwords[currentPostId]) {
-        posts = posts.filter(p => p.id !== currentPostId);
-        delete passwords[currentPostId];
-        delete commentsMap[currentPostId];
-        delete commentPasswords[currentPostId];
-		bookmarks = bookmarks.filter(id => id !== currentPostId); // 북마크에서도 제거
-        saveData();
-        goToBoard();
-      } else {
-        alert("비밀번호가 틀렸습니다.");
-      }
-    }
-
-    function renderComments() {
-      const commentsDiv = document.getElementById("comments");
-      const comments = commentsMap[currentPostId] || [];
-      commentsDiv.innerHTML = "";
-      comments.forEach((c, i) => {
-        commentsDiv.innerHTML += `
-          <div class="comment">
-            <div class="comment-content">${c.text}</div>
-            <button class="delete-btn" onclick="deleteComment(${i})">X</button>
-          </div>
-        `;
+        Object.entries(data).reverse().forEach(([id, post]) => {
+          if (bookmarksOnly && !bookmarks.includes(id)) return;
+          const isBookmarked = bookmarks.includes(id);
+          const postDiv = document.createElement("div");
+          postDiv.className = "post";
+          postDiv.innerHTML = `
+            <div class="name">
+              ${post.name} <span class="bookmark" onclick="toggleBookmark('${id}', event)">${isBookmarked ? '★' : '☆'}</span>
+            </div>
+            <div>레벨: ${post.level} / 투자금: ${post.investment} / ${post.royal}</div>
+            <div>연락: ${post.contact}</div>
+            <div>하고싶은 말: ${post.message}</div>
+          `;
+          container.appendChild(postDiv);
+        });
+        localStorage.setItem("guildBookmarks", JSON.stringify(bookmarks));
       });
     }
 
-    function addComment() {
-      const text = document.getElementById("new-comment").value.trim();
-      const pw = prompt("댓글 비밀번호를 입력하세요:");
-      if (!text || !pw) return;
-      if (!commentsMap[currentPostId]) commentsMap[currentPostId] = [];
-      if (!commentPasswords[currentPostId]) commentPasswords[currentPostId] = [];
-      commentsMap[currentPostId].push({ text });
-      commentPasswords[currentPostId].push(pw);
-      document.getElementById("new-comment").value = "";
-      saveData();
-      renderComments();
-      renderPosts();
-    }
-
-    function deleteComment(index) {
-      const inputPw = prompt("댓글 비밀번호를 입력하세요:");
-      if (inputPw === commentPasswords[currentPostId][index]) {
-        commentsMap[currentPostId].splice(index, 1);
-        commentPasswords[currentPostId].splice(index, 1);
-        saveData();
-        renderComments();
-        renderPosts();
+    window.toggleBookmark = function(id, event) {
+      event.stopPropagation();
+      const index = bookmarks.indexOf(id);
+      if (index > -1) {
+        bookmarks.splice(index, 1);
       } else {
-        alert("비밀번호가 틀렸습니다.");
+        bookmarks.push(id);
       }
+      localStorage.setItem("guildBookmarks", JSON.stringify(bookmarks));
+      renderPosts(showBookmarksOnly);
     }
 
-    function goBack() {
-      location.href = "https://selenophile-15.github.io/stk/";
-    }
-
-    function goToBoard() {
-      document.getElementById("main-view").style.display = "block";
-      document.getElementById("post-detail-view").style.display = "none";
-      renderPosts();
-    }
-
-    renderPosts();
+    window.renderPosts = renderPosts;
   </script>
 </body>
 </html>
