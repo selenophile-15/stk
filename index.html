@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
-  <title>길드 조건 검색기</title>
+  <title>국내 길드 검색 툴</title>
   <style>
     body {
       font-family: 'Arial', sans-serif;
@@ -70,23 +70,67 @@
       background-color: #dabfff;
       color: #000;
     }
+    .warning-toggle {
+      cursor: pointer;
+      color: #dabfff;
+      font-weight: bold;
+      margin-bottom: 10px;
+      display: inline-block;
+    }
+    .warning-box {
+      display: none;
+      background-color: #3a3a4d;
+      border: 1px solid #555;
+      border-radius: 10px;
+      padding: 15px;
+      margin-bottom: 15px;
+      white-space: pre-line;
+    }
+    .warning-title { /* 추가된 스타일 */
+      font-weight: bold;
+      color: red;
+    }
+    .creator { /* 추가된 스타일 */
+      font-size: 0.8rem;
+      color: #888;
+      text-align: left;
+    }
   </style>
 </head>
 <body>
+  <div class="creator">제작자 : 셀레노필</div> <!-- 추가된 제작자 표시 -->
   <div class="container">
+
+    <!-- 📌 접었다 펴는 경고문 -->
     <div class="card">
-      <h2>길드 조건 검색기</h2>
-      <input type="text" id="level" placeholder="현재 레벨을 입력하세요">
+      <div class="warning-toggle" onclick="toggleWarning()">▶ 주의사항 보기</div>
+      <div class="warning-box" id="warning-box">
+        <span class="warning-title"># 샵타이탄 국내 길드 검색 툴 관련 주의사항</span>
+        제가 정리한 데이터에는 건물들 최저 레벨 및 최대 레벨, 훈련소 레벨, 길드장, 단톡 필참 여부 등 정보가 있지만 여기에는 표시하지 않았습니다.
+        길드 건물들 레벨 정보를 넣으면 길드들 순위 매기는 것처럼 보여 불쾌해 하시는 분들도 있을 수 있다 판단하여 가입 조건만 넣었으니 사용 시 불편해도 양해바랍니다.
+        길드 레벨, 건물들 레벨, 길드 인원 현황 같은 부분까지는 제가 매번 파악할 수 없기 때문에 직접 검색해서 확인해야 합니다.
+        제가 길드 가입 조건을 확인했을 때 수작업으로 입력하는 시스템이기 때문에 몇몇 길드들 가입 조건이 변경되어도 업데이트가 되어있지 않을 수 있습니다.
+        비공개 길드는 검색해도 나오지 않기 때문에 월챗에 홍보글 올라오는 것을 기다리세요.
+
+        본인이 가입하고 싶은 길드가 사람 꽉 차서 홍보도 안 하는 중인데 그 길드 관계자들 불러서 누구 추방하고 자기 넣어달라거나 그냥 넣어달라고 자꾸 떼쓰거나 자기 현재 상태보다 훨씬 높은 조건을 요하는 길드 문의 톡방에 찾아가 불편하게 만들지 마세요.
+        길드 이적을 원하는 유저의 편의를 위해 만들었지만 부작용이 크다고 판단해 이 사이트 없애 버릴 겁니다.
+      </div>
+    </div>
+
+    <div class="card">
+      <h2>국내 길드 검색 툴</h2>
+      <input type="number" id="level" placeholder="현재 레벨을 입력하세요">
       <input type="text" id="investment" placeholder="현재 투자금 (숫자만 입력)" oninput="formatInvestment(this)">
       <button onclick="filterGuilds()">길드 검색</button>
     </div>
+
     <div id="results" class="card" style="display: none;">
       <h2>검색 결과</h2>
       <div class="sort-buttons">
-        <button onclick="sortGuilds('levelAsc')">레벨 낮은 순</button>
-        <button onclick="sortGuilds('levelDesc')">레벨 높은 순</button>
-        <button onclick="sortGuilds('investmentAsc')">투자금 낮은 순</button>
-        <button onclick="sortGuilds('investmentDesc')">투자금 높은 순</button>
+        <button onclick="sortGuilds('levelAsc')">레벨 조건 낮은 순</button>
+        <button onclick="sortGuilds('levelDesc')">레벨 조건 높은 순</button>
+        <button onclick="sortGuilds('investmentAsc')">투자금 조건 낮은 순</button>
+        <button onclick="sortGuilds('investmentDesc')">투자금 조건 높은 순</button>
       </div>
       <div id="guild-list"></div>
     </div>
@@ -99,6 +143,14 @@
       const raw = input.value.replace(/[^0-9]/g, '');
       investmentValue = parseInt(raw || '0', 10);
       input.value = investmentValue.toLocaleString();
+    }
+
+    function toggleWarning() {
+      const box = document.getElementById("warning-box");
+      const toggle = document.querySelector(".warning-toggle");
+      const isVisible = box.style.display === "block";
+      box.style.display = isVisible ? "none" : "block";
+      toggle.textContent = isVisible ? "▶ 주의사항 보기" : "▼ 주의사항 닫기";
     }
 
     const guilds = [
@@ -153,6 +205,7 @@
       { name: "so happy", level: 1, investment: 0, open: true, royalFull: "", note: "" }
     ];
 
+
     let filteredGuilds = [];
 
     function filterGuilds() {
@@ -176,6 +229,7 @@
 
     function displayGuilds(guildsToDisplay) {
       const guildListDiv = document.getElementById("guild-list");
+      guildListDiv.innerHTML
       guildListDiv.innerHTML = '';
 
       guildsToDisplay.forEach(g => {
@@ -185,7 +239,7 @@
             <div class="guild-line">
               <span>레벨 조건 : ${g.level}</span>
               <span>/</span>
-              <span>투자금 조건 : ${g.investment.toLocaleString()} 원</span>
+              <span>투자금 조건 : ${g.investment.toLocaleString()} 골드</span>
             </div>
             <div class="guild-line">
               <span>공개 상태 : ${g.open ? '공개' : '비공개'}</span>
