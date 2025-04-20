@@ -60,25 +60,6 @@
       color: #ccc;
       margin-top: 5px;
     }
-    textarea#message {
-      font-family: 'Arial', sans-serif;
-      background-color: #3a3a4d;
-      color: white;
-      border: 1px solid #555;
-      border-radius: 8px;
-      resize: vertical;
-  	}
-    .guild-name {
-      display: inline-block; /* 이름과 북마크 아이콘을 같은 줄에 표시 */
-    }
-    .bookmark-icon {
-      background: none;
-      border: none;
-      color: gold;
-      font-size: 1.2em;
-      cursor: pointer;
-      margin-left: 5px; /* 이름과의 간격 조절 */
-    }
   </style>
 </head>
 <body>
@@ -101,6 +82,7 @@
       </div>
     </div>
     <div id="posts"></div>
+    <div id="detail" class="card" style="display:none;"></div>
   </div>
   <script>
     let posts = JSON.parse(localStorage.getItem("guildPosts") || "[]");
@@ -137,9 +119,9 @@
           </div>
           <div>레벨: ${post.level} / 투자금: ${post.investment} / ${post.royal}</div>
           <div>연락: ${post.contact}</div>
-          <div>하고싶은 말: ${post.message}</div>
           <div>삭제까지 ${days}일 ${hours}시간 ${minutes}분</div>
         `;
+        postDiv.onclick = () => openDetail(post.id);
         container.appendChild(postDiv);
       });
     }
@@ -181,6 +163,25 @@
       posts.push(post);
       saveData();
       renderPosts();
+    }
+
+    function openDetail(id) {
+      const post = posts.find(p => p.id === id);
+      const detail = document.getElementById("detail");
+      detail.style.display = "block";
+      detail.innerHTML = `
+        <h3>${post.name} 님의 글</h3>
+        <p><strong>레벨:</strong> ${post.level}</p>
+        <p><strong>투자금:</strong> ${post.investment}</p>
+        <p><strong>왕실풀확 상태:</strong> ${post.royal}</p>
+        <p><strong>연락 방법:</strong> ${post.contact}</p>
+        <p><strong>하고싶은 말:</strong><br>${post.message}</p>
+        <button onclick="closeDetail()">닫기</button>
+      `;
+    }
+
+    function closeDetail() {
+      document.getElementById("detail").style.display = "none";
     }
 
     renderPosts();
