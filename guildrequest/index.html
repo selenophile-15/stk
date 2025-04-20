@@ -1,1 +1,208 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>길드 구해요 게시판</title>
+  <style>
+    body {
+      font-family: 'Arial', sans-serif;
+      padding: 20px;
+      background: #1e1e2f;
+      color: white;
+    }
+    .container {
+      max-width: 700px;
+      margin: auto;
+    }
+    .card {
+      background: #2b2b3c;
+      border-radius: 12px;
+      padding: 20px;
+      margin-top: 20px;
+    }
+    input, textarea, select, button {
+      width: 100%;
+      padding: 10px;
+      margin-top: 10px;
+      font-size: 1rem;
+      box-sizing: border-box;
+    }
+    button {
+      background-color: #6a0dad;
+      color: white;
+      border: none;
+      border-radius: 8px;
+      cursor: pointer;
+    }
+    button:hover {
+      background-color: #8b4ee7;
+    }
+    .post {
+      background-color: #3a3a4d;
+      border: 1px solid #444;
+      border-radius: 10px;
+      padding: 15px;
+      margin-top: 15px;
+      cursor: pointer;
+    }
+    .back-button {
+      background: none;
+      color: white;
+      font-size: 1.2rem;
+      border: none;
+      cursor: pointer;
+      margin-bottom: 10px;
+    }
+    .comment-box {
+      margin-top: 20px;
+    }
+    .comment {
+      background: #444;
+      padding: 10px;
+      border-radius: 8px;
+      margin-top: 10px;
+    }
+    .small-text {
+      font-size: 0.8rem;
+      color: #ccc;
+      margin-top: 5px;
+    }
+  </style>
+</head>
+<body>
+  <div class="container" id="main-view">
+    <button class="back-button" onclick="goBack()">← 뒤로가기</button>
+    <div class="card">
+      <h2>길드 구해요 게시판</h2>
+      <input type="text" id="name" placeholder="이름" />
+      <input type="number" id="level" placeholder="레벨" />
+      <input type="text" id="investment" placeholder="투자금" />
+      <input type="text" id="royal" placeholder="왕실풀확 상태" />
+      <input type="text" id="contact" placeholder="연락 방법 (예: 인게임 월챗, 오픈톡 링크 등)" />
+      <textarea id="message" placeholder="하고싶은 말"></textarea>
+      <div class="small-text">하고싶은 말을 제외한 항목들은 필수 입력 항목이며 하나라도 적지않을 경우 등록할 수 없습니다.</div>
+      <button onclick="submitPost()">등록</button>
+    </div>
+    <div id="posts"></div>
+  </div>
+
+  <div class="container" id="post-detail-view" style="display:none">
+    <button class="back-button" onclick="goToBoard()">← 게시판으로</button>
+    <div id="post-detail"></div>
+    <div class="card comment-box">
+      <textarea id="new-comment" placeholder="댓글을 입력하세요"></textarea>
+      <button onclick="addComment()">댓글 등록</button>
+    </div>
+    <div id="comments"></div>
+  </div>
+
+  <script>
+    let posts = JSON.parse(localStorage.getItem("guildPosts") || "[]");
+    let commentsMap = JSON.parse(localStorage.getItem("guildComments") || "{}")
+    let currentPostId = null;
+
+    function saveData() {
+      localStorage.setItem("guildPosts", JSON.stringify(posts));
+      localStorage.setItem("guildComments", JSON.stringify(commentsMap));
+    }
+
+    function renderPosts() {
+      const now = Date.now();
+      posts = posts.filter(post => now - post.timestamp < 5 * 86400000); // 5일 유지
+      saveData();
+
+      const container = document.getElementById("posts");
+      container.innerHTML = "";
+      [...posts].reverse().forEach(post => {
+        const commentCount = commentsMap[post.id]?.length || 0;
+        const daysLeft = 5 - Math.floor((now - post.timestamp) / 86400000);
+        container.innerHTML += `
+          <div class="post" onclick="openPost('${post.id}')">
+            <div><strong>${post.name}</strong> | 레벨 ${post.level} | 투자금 ${post.investment} | 남은일 ${daysLeft}일</div>
+            <div>댓글 ${commentCount}개</div>
+          </div>
+        `;
+      });
+    }
+
+    function submitPost() {
+      const name = document.getElementById("name").value.trim();
+      const level = document.getElementById("level").value;
+      const investment = document.getElementById("investment").value;
+      const royal = document.getElementById("royal").value;
+      const contact = document.getElementById("contact").value;
+      const message = document.getElementById("message").value;
+
+      if (!name || !level || !investment || !royal || !contact) {
+        alert("모든 필수 항목을 입력해주세요.");
+        return;
+      }
+      if (posts.some(p => p.name === name)) {
+        alert("이미 등록된 유저입니다. 기간이 지나고 재신청하세요.");
+        return;
+      }
+      const post = {
+        id: Date.now().toString(),
+        name, level, investment, royal, contact, message,
+        timestamp: Date.now()
+      };
+      posts.push(post);
+      saveData();
+      renderPosts();
+    }
+
+    function openPost(id) {
+      currentPostId = id;
+      const post = posts.find(p => p.id === id);
+      document.getElementById("main-view").style.display = "none";
+      document.getElementById("post-detail-view").style.display = "block";
+
+      document.getElementById("post-detail").innerHTML = `
+        <div class="card">
+          <div><strong>${post.name}</strong></div>
+          <div>레벨: ${post.level}</div>
+          <div>투자금: ${post.investment}</div>
+          <div>왕실풀확 상태: ${post.royal}</div>
+          <div>연락 방법: ${post.contact}</div>
+          <div>하고싶은 말:<br/>${post.message}</div>
+        </div>
+      `;
+      renderComments();
+    }
+
+    function renderComments() {
+      const commentsDiv = document.getElementById("comments");
+      const comments = commentsMap[currentPostId] || [];
+      commentsDiv.innerHTML = "";
+      comments.forEach(c => {
+        commentsDiv.innerHTML += `<div class="comment">${c}</div>`;
+      });
+    }
+
+    function addComment() {
+      const text = document.getElementById("new-comment").value.trim();
+      if (!text) return;
+      if (!commentsMap[currentPostId]) commentsMap[currentPostId] = [];
+      commentsMap[currentPostId].push(text);
+      document.getElementById("new-comment").value = "";
+      saveData();
+      renderComments();
+      renderPosts();
+    }
+
+    function goBack() {
+      location.href = "index.html"; // 또는 원래 페이지로
+    }
+
+    function goToBoard() {
+      document.getElementById("main-view").style.display = "block";
+      document.getElementById("post-detail-view").style.display = "none";
+      renderPosts();
+    }
+
+    renderPosts();
+  </script>
+</body>
+</html>
 
