@@ -21,7 +21,7 @@
       padding: 20px;
       margin-top: 20px;
     }
-    input, textarea, button {
+    input, textarea, select, button {
       width: 100%;
       padding: 10px;
       margin-top: 10px;
@@ -46,19 +46,62 @@
       margin-top: 15px;
       cursor: pointer;
     }
-    .post .name {
-      font-weight: bold;
-      font-size: 1.1rem;
-    }
-    .post .bookmark {
-      color: gold;
+    .back-button {
+      background: none;
+      color: white;
+      font-size: 1.2rem;
+      border: none;
       cursor: pointer;
-      margin-left: 8px;
+      margin-bottom: 10px;
+    }
+    .comment-box {
+      margin-top: 20px;
+    }
+    .comment {
+      background: #444;
+      border-radius: 8px;
+      margin-top: 10px;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+    }
+    .comment-content {
+      padding: 10px;
+      flex: 1;
+    }
+    .delete-btn {
+      width: 40px;
+      height: 100%;
+      background-color: #6a0dad;
+      color: white;
+      border: none;
+      border-left: 1px solid #222;
+      cursor: pointer;
+      border-radius: 0 8px 8px 0;
     }
     .small-text {
       font-size: 0.8rem;
       color: #ccc;
       margin-top: 5px;
+    }
+    textarea#message {
+      font-family: 'Arial', sans-serif;
+      background-color: #3a3a4d;
+      color: white;
+      border: 1px solid #555;
+      border-radius: 8px;
+      resize: vertical;
+    }
+    .guild-name {
+      display: inline-block;
+    }
+    .bookmark-icon {
+      background: none;
+      border: none;
+      color: gold;
+      font-size: 1.2em;
+      cursor: pointer;
+      margin-left: 5px;
     }
   </style>
 </head>
@@ -82,61 +125,36 @@
       </div>
     </div>
     <div id="posts"></div>
-    <div id="detail" class="card" style="display:none;"></div>
   </div>
-  <script>
-    let posts = JSON.parse(localStorage.getItem("guildPosts") || "[]");
+
+  <script type="module">
+    import { initializeApp } from "https://www.gstatic.com/firebasejs/10.11.0/firebase-app.js";
+    import { getDatabase, ref, push, onValue, remove, update } from "https://www.gstatic.com/firebasejs/10.11.0/firebase-database.js";
+    import { getAuth, signInAnonymously, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/10.11.0/firebase-auth.js";
+
+    const firebaseConfig = {
+      apiKey: "AIzaSyC-jlwSZPIt8aq9Tx2aJ8_0u4f_R7BFxR8",
+      authDomain: "stkguild-b2b17.firebaseapp.com",
+      databaseURL: "https://stkguild-b2b17-default-rtdb.firebaseio.com",
+      projectId: "stkguild-b2b17",
+      appId: "1:483792187181:web:8d1e6401cc6de5aee4eda4",
+    };
+
+    const app = initializeApp(firebaseConfig);
+    const db = getDatabase(app);
+    const auth = getAuth(app);
+
+    let userId = null;
     let bookmarks = JSON.parse(localStorage.getItem("guildBookmarks") || "[]");
     let showOnlyBookmarks = false;
 
-    function saveData() {
-      localStorage.setItem("guildPosts", JSON.stringify(posts));
-      localStorage.setItem("guildBookmarks", JSON.stringify(bookmarks));
-    }
-
-    function renderPosts(bookmarksOnly = false) {
-      showOnlyBookmarks = bookmarksOnly;
-      const now = Date.now();
-      posts = posts.filter(post => now - post.timestamp < 5 * 86400000);
-      saveData();
-
-      const container = document.getElementById("posts");
-      container.innerHTML = "";
-      const filteredPosts = bookmarksOnly ? posts.filter(post => bookmarks.includes(post.id)) : posts;
-
-      [...filteredPosts].reverse().forEach(post => {
-        const timeLeft = 5 * 86400000 - (now - post.timestamp);
-        const days = Math.floor(timeLeft / 86400000);
-        const hours = Math.floor((timeLeft % 86400000) / 3600000);
-        const minutes = Math.floor((timeLeft % 3600000) / 60000);
-        const isBookmarked = bookmarks.includes(post.id);
-
-        const postDiv = document.createElement("div");
-        postDiv.className = "post";
-        postDiv.innerHTML = `
-          <div class="name">
-            ${post.name} <span class="bookmark" onclick="toggleBookmark('${post.id}', event)">${isBookmarked ? '★' : '☆'}</span>
-          </div>
-          <div>레벨: ${post.level} / 투자금: ${post.investment} / ${post.royal}</div>
-          <div>연락: ${post.contact}</div>
-          <div>삭제까지 ${days}일 ${hours}시간 ${minutes}분</div>
-        `;
-        postDiv.onclick = () => openDetail(post.id);
-        container.appendChild(postDiv);
-      });
-    }
-
-    function toggleBookmark(id, event) {
-      event.stopPropagation();
-      const index = bookmarks.indexOf(id);
-      if (index > -1) {
-        bookmarks.splice(index, 1);
-      } else {
-        bookmarks.push(id);
+    signInAnonymously(auth);
+    onAuthStateChanged(auth, (user) => {
+      if (user) {
+        userId = user.uid;
+        renderPosts();
       }
-      saveData();
-      renderPosts(showOnlyBookmarks);
-    }
+    });
 
     function submitPost() {
       const name = document.getElementById("name").value.trim();
@@ -145,46 +163,60 @@
       const royal = document.getElementById("royal").value;
       const contact = document.getElementById("contact").value;
       const message = document.getElementById("message").value;
+      if (!name || !level || !investment || !royal || !contact) return;
 
-      if (!name || !level || !investment || !royal || !contact) {
-        alert("모든 필수 항목을 입력해주세요.");
-        return;
-      }
-      if (posts.some(p => p.name === name)) {
-        alert("이미 등록된 유저입니다. 기간이 지나고 재신청하세요.");
-        return;
-      }
-
-      const post = {
-        id: Date.now().toString(),
+      const postData = {
         name, level, investment, royal, contact, message,
-        timestamp: Date.now()
+        userId, timestamp: Date.now()
       };
-      posts.push(post);
-      saveData();
-      renderPosts();
+      push(ref(db, "posts"), postData);
     }
 
-    function openDetail(id) {
-      const post = posts.find(p => p.id === id);
-      const detail = document.getElementById("detail");
-      detail.style.display = "block";
-      detail.innerHTML = `
-        <h3>${post.name} 님의 글</h3>
-        <p><strong>레벨:</strong> ${post.level}</p>
-        <p><strong>투자금:</strong> ${post.investment}</p>
-        <p><strong>왕실풀확 상태:</strong> ${post.royal}</p>
-        <p><strong>연락 방법:</strong> ${post.contact}</p>
-        <p><strong>하고싶은 말:</strong><br>${post.message}</p>
-        <button onclick="closeDetail()">닫기</button>
-      `;
+    function renderPosts(bookmarksOnly = false) {
+      showOnlyBookmarks = bookmarksOnly;
+      const now = Date.now();
+      onValue(ref(db, "posts"), snapshot => {
+        const container = document.getElementById("posts");
+        container.innerHTML = "";
+        const data = snapshot.val();
+        if (!data) return;
+
+        Object.entries(data).reverse().forEach(([id, post]) => {
+          if ((now - post.timestamp > 5 * 86400000) || (bookmarksOnly && !bookmarks.includes(id))) return;
+          const timeLeft = 5 * 86400000 - (now - post.timestamp);
+          const days = Math.floor(timeLeft / 86400000);
+          const hours = Math.floor((timeLeft % 86400000) / 3600000);
+          const minutes = Math.floor((timeLeft % 3600000) / 60000);
+          const isBookmarked = bookmarks.includes(id);
+
+          const postDiv = document.createElement("div");
+          postDiv.className = "post";
+          postDiv.innerHTML = `
+            <div class="name">
+              ${post.name} <span class="bookmark" onclick="toggleBookmark('${id}', event)">${isBookmarked ? '★' : '☆'}</span>
+            </div>
+            <div>레벨: ${post.level} / 투자금: ${post.investment} / ${post.royal}</div>
+            <div>삭제까지 ${days}일 ${hours}시간 ${minutes}분</div>
+          `;
+          container.appendChild(postDiv);
+        });
+        localStorage.setItem("guildBookmarks", JSON.stringify(bookmarks));
+      });
     }
 
-    function closeDetail() {
-      document.getElementById("detail").style.display = "none";
+    window.toggleBookmark = function(id, event) {
+      event.stopPropagation();
+      const index = bookmarks.indexOf(id);
+      if (index > -1) {
+        bookmarks.splice(index, 1);
+      } else {
+        bookmarks.push(id);
+      }
+      localStorage.setItem("guildBookmarks", JSON.stringify(bookmarks));
+      renderPosts(showOnlyBookmarks);
     }
 
-    renderPosts();
+    window.renderPosts = renderPosts;
   </script>
 </body>
 </html>
