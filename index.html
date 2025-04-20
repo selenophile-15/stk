@@ -267,7 +267,8 @@ const guilds = [
 		  </div>
           <div class="guild-line">
             <span>레벨 조건 : ${g.level}</span>
-            <span>/</span>
+          </div>
+          <div class="guild-line">
             <span>투자금 조건 : ${g.investment.toLocaleString()} 골드</span>
           </div>
           <div class="guild-line">
@@ -275,9 +276,11 @@ const guilds = [
           </div>
           <div class="guild-line">
             <span>공개 상태 : ${g.open ? '공개' : '비공개'}</span>
-            <span>/</span>
+          </div>
+          <div class="guild-line">
             <span>왕실풀확 : ${g.royalFull ? g.royalFull : '-'}</span>
-            <span>/</span>
+          </div>
+          <div class="guild-line">
             <span>문의톡 : ${g.note || '-'}</span>
           </div>
         </div>
