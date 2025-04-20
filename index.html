@@ -149,8 +149,8 @@
       <input type="number" id="level" placeholder="현재 레벨을 입력하세요">
       <input type="text" id="investment" placeholder="현재 투자금 (숫자만 입력)" oninput="formatInvestment(this)">
       <button onclick="filterGuilds()">길드 검색</button>
-	  <button onclick="showBookmarks()">북마크한 길드 보기</button>
-	  <button onclick="window.open(<a href="./guildrequest/" class="guild-button">길드 구해요</a>)">길드 구해요</button>
+      <button onclick="showBookmarks()">북마크한 길드 보기</button>
+      <button onclick="location.href='guildrequest/guild_request_board.html'">길드 구해요</button>
     </div>
 
     <div id="results" class="card" style="display: none; position: relative;">
@@ -161,7 +161,7 @@
         <button onclick="sortGuilds('levelDesc')">레벨 조건 높은 순</button>
         <button onclick="sortGuilds('investmentAsc')">투자금 조건 낮은 순</button>
         <button onclick="sortGuilds('investmentDesc')">투자금 조건 높은 순</button>
-		<button onclick="sortGuilds('trainingDesc')">훈련소 레벨 높은 순</button>
+        <button onclick="sortGuilds('trainingDesc')">훈련소 레벨 높은 순</button>
       </div>
       <div id="guild-list"></div>
     </div>
