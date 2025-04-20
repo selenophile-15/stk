@@ -192,7 +192,11 @@
     }
 
     function goBack() {
-      location.href = "index.html"; // 또는 원래 페이지로
+      if (history.length > 1) {
+        history.back();
+      } else {
+        location.href = "../"; // 메인 페이지로 이동
+      }
     }
 
     function goToBoard() {
