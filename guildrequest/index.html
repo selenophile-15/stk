@@ -156,21 +156,42 @@
       }
     });
 
-    function submitPost() {
-      const name = document.getElementById("name").value.trim();
-      const level = document.getElementById("level").value;
-      const investment = document.getElementById("investment").value;
-      const royal = document.getElementById("royal").value;
-      const contact = document.getElementById("contact").value;
-      const message = document.getElementById("message").value;
-      if (!name || !level || !investment || !royal || !contact) return;
+  function submitPost() {
+    const name = document.getElementById("name").value.trim();
+    const level = document.getElementById("level").value;
+    const investment = document.getElementById("investment").value;
+    const royal = document.getElementById("royal").value;
+    const contact = document.getElementById("contact").value;
+    const message = document.getElementById("message").value;
 
-      const postData = {
-        name, level, investment, royal, contact, message,
-        userId, timestamp: Date.now()
-      };
-      push(ref(db, "posts"), postData);
+    if (!name || !level || !investment || !royal || !contact) {
+      alert("모든 필수 항목을 입력해주세요.");
+      return;
     }
+
+    const postData = {
+      name, level, investment, royal, contact, message,
+      userId, timestamp: Date.now()
+    };
+
+  // 글 Firebase에 저장
+  push(ref(db, "posts"), postData)
+    .then(() => {
+      // 입력 필드 초기화
+      document.getElementById("name").value = "";
+      document.getElementById("level").value = "";
+      document.getElementById("investment").value = "";
+      document.getElementById("royal").value = "";
+      document.getElementById("contact").value = "";
+      document.getElementById("message").value = "";
+
+      alert("글이 성공적으로 등록되었습니다!");
+      renderPosts();
+    })
+    .catch((error) => {
+      alert("등록 중 오류가 발생했습니다: " + error.message);
+    });
+}
 
     function renderPosts(bookmarksOnly = false) {
       showOnlyBookmarks = bookmarksOnly;
