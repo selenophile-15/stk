@@ -126,7 +126,7 @@
       <div class="warning-box" id="warning-box">
         <span class="warning-title"># 주의사항</span>
 	제작자는 살면서 코딩을 배운 적이 없습니다.
-	챗GPT 채찍질하면서 여러 시도 끝에 완성한 사이트니까 조잡해도 그러려니 하고 쓰세요.
+	챗GPT 채찍질하면서 여러 시도 끝에 완성한 사이트니까 엉성해도 그러려니 하고 쓰세요.
 	      
         건물들 최저 레벨 및 최대 레벨, 훈련소 레벨, 길드장, 단톡 필참 여부 등 여러 정보들을 가지고 있지만 여기에는 표시하지 않았습니다.
         길드 건물들 레벨 정보를 넣으면 길드들 순위 매기는 것처럼 보여 불쾌해 하시는 분들도 있을 수 있다 판단하여 가입 조건만 넣었으니 사용 시 불편해도 양해바랍니다.
@@ -150,9 +150,11 @@
       <input type="text" id="investment" placeholder="현재 투자금 (숫자만 입력)" oninput="formatInvestment(this)">
       <button onclick="filterGuilds()">길드 검색</button>
 	  <button onclick="showBookmarks()">북마크한 길드 보기</button>
+	  <button onclick="window.open('guild_request_board.html', '_blank')">길드 구해요</button>
     </div>
 
-    <div id="results" class="card" style="display: none;">
+    <div id="results" class="card" style="display: none; position: relative;">
+	<button onclick="closeResults()" style="position: absolute; top: 10px; right: 10px; background: none; color: white; font-size: 1.2rem; border: none; cursor: pointer;">✖</button>
       <h2>검색 결과</h2>
       <div class="sort-buttons">
         <button onclick="sortGuilds('levelAsc')">레벨 조건 낮은 순</button>
@@ -166,24 +168,7 @@
   </div>
 
   <script>
-    let investmentValue = 0;
-
-    function formatInvestment(input) {
-      const raw = input.value.replace(/[^0-9]/g, '');
-      investmentValue = parseInt(raw || '0', 10);
-	  // 숫자만 입력받도록 수정
-	  input.value = investmentValue.toLocaleString();
-	}
-
-    function toggleWarning() {
-      const box = document.getElementById("warning-box");
-      const toggle = document.querySelector(".warning-toggle");
-      const isVisible = box.style.display === "block";
-      box.style.display = isVisible ? "none" : "block";
-      toggle.textContent = isVisible ? "▶ 주의사항 보기" : "▼ 주의사항 닫기";
-    }
-
-const guilds = [
+  const guilds = [
   { name: "가죽공방", level: 78, investment: 500000000000, open: true, royalFull: "", note: "하드캐리 가입?", training: 40 },
   { name: "거상", level: 1, investment: 0, open: false, royalFull: "왕실, 풀확", note: "", training: 40 },
   { name: "고양이는 진리다", level: 50, investment: 0, open: false, royalFull: "", note: "고양이=진리", training: 40 },
@@ -235,17 +220,39 @@ const guilds = [
   { name: "so happy", level: 1, investment: 0, open: true, royalFull: "", note: "", training: 37 }
 ];
 
-    let filteredGuilds = [];
 
-	function filterGuilds() {
-      const levelInput = document.getElementById("level").value.replace(/[^0-9]/g, '');
-      const level = parseInt(levelInput || '0', 10);
-      const investment = investmentValue;
-      const resultDiv = document.getElementById("results");
-      const guildListDiv = document.getElementById("guild-list");
-      guildListDiv.innerHTML = '';
+  let investmentValue = 0;
+  let filteredGuilds = [];
+  let isBookmarkMode = false; // 북마크 보기 상태 여부
 
-      filteredGuilds = guilds.filter(g => level >= g.level && investment >= g.investment);
+  function formatInvestment(input) {
+    const raw = input.value.replace(/[^0-9]/g, '');
+    investmentValue = parseInt(raw || '0', 10);
+    input.value = investmentValue.toLocaleString();
+  }
+
+  function toggleWarning() {
+    const box = document.getElementById("warning-box");
+    const toggle = document.querySelector(".warning-toggle");
+    const isVisible = box.style.display === "block";
+    box.style.display = isVisible ? "none" : "block";
+    toggle.textContent = isVisible ? "▶ 주의사항 보기" : "▼ 주의사항 닫기";
+  }
+
+  function closeResults() {
+    document.getElementById("results").style.display = "none";
+  }
+
+  function filterGuilds() {
+    const levelInput = document.getElementById("level").value.replace(/[^0-9]/g, '');
+    const level = parseInt(levelInput || '0', 10);
+    const investment = investmentValue;
+    const resultDiv = document.getElementById("results");
+    const guildListDiv = document.getElementById("guild-list");
+    guildListDiv.innerHTML = '';
+
+    filteredGuilds = guilds.filter(g => level >= g.level && investment >= g.investment);
+    isBookmarkMode = false;
 
     if (filteredGuilds.length === 0) {
       guildListDiv.innerHTML = '<p>조건에 맞는 길드가 없습니다.</p>';
@@ -256,58 +263,12 @@ const guilds = [
     resultDiv.style.display = 'block';
   }
 
-  function displayGuilds(guildsToDisplay) {
-    const guildListDiv = document.getElementById("guild-list");
-    guildListDiv.innerHTML = '';
-
-    const bookmarks = JSON.parse(localStorage.getItem("bookmarks") || "[]");
-
-    guildsToDisplay.forEach(g => {
-      const isBookmarked = bookmarks.includes(g.name);
-      guildListDiv.innerHTML += `
-        <div class="guild-box">
-          <div class="guild-name">
-			${g.name}&nbsp;&nbsp;<span class="bookmark-icon" onclick="toggleBookmark('${g.name}')">${isBookmarked ? '★' : '☆'}</span>
-		  </div>
-          <div class="guild-line">
-            <span>레벨 조건 : ${g.level}</span>
-          </div>
-          <div class="guild-line">
-            <span>투자금 조건 : ${g.investment.toLocaleString()} 골드</span>
-          </div>
-          <div class="guild-line">
-            <span>훈련소 (영웅 최대 레벨) : Lv. ${g.training || '-'}</span>
-          </div>
-          <div class="guild-line">
-            <span>공개 상태 : ${g.open ? '공개' : '비공개'}</span>
-          </div>
-          <div class="guild-line">
-            <span>왕실풀확 : ${g.royalFull ? g.royalFull : '-'}</span>
-          </div>
-          <div class="guild-line">
-            <span>문의톡 : ${g.note || '-'}</span>
-          </div>
-        </div>
-      `;
-    });
-  }
-
-  function toggleBookmark(name) {
-    let bookmarks = JSON.parse(localStorage.getItem("bookmarks") || "[]");
-    if (bookmarks.includes(name)) {
-      bookmarks = bookmarks.filter(n => n !== name);
-    } else {
-      bookmarks.push(name);
-    }
-    localStorage.setItem("bookmarks", JSON.stringify(bookmarks));
-    displayGuilds(filteredGuilds);
-  }
-
   function showBookmarks() {
     const bookmarks = JSON.parse(localStorage.getItem("bookmarks") || "[]");
-    const bookmarkedGuilds = guilds.filter(g => bookmarks.includes(g.name));
+    filteredGuilds = guilds.filter(g => bookmarks.includes(g.name));
+    isBookmarkMode = true;
     document.getElementById("results").style.display = 'block';
-    displayGuilds(bookmarkedGuilds);
+    displayGuilds(filteredGuilds);
   }
 
   function sortGuilds(sortBy) {
@@ -332,13 +293,54 @@ const guilds = [
     displayGuilds(filteredGuilds);
   }
 
-  document.getElementById("level").addEventListener("keyup", function(event) {
+  function displayGuilds(guildsToDisplay) {
+    const guildListDiv = document.getElementById("guild-list");
+    guildListDiv.innerHTML = '';
+
+    const bookmarks = JSON.parse(localStorage.getItem("bookmarks") || "[]");
+
+    guildsToDisplay.forEach(g => {
+      const isBookmarked = bookmarks.includes(g.name);
+      guildListDiv.innerHTML += `
+        <div class="guild-box">
+          <div class="guild-name">
+            ${g.name}&nbsp;&nbsp;<span class="bookmark-icon" onclick="toggleBookmark('${g.name}')">${isBookmarked ? '★' : '☆'}</span>
+          </div>
+          <div class="guild-line"><span>레벨 조건 : ${g.level}</span></div>
+          <div class="guild-line"><span>투자금 조건 : ${g.investment.toLocaleString()} 골드</span></div>
+          <div class="guild-line"><span>훈련소 (영웅 최대 레벨) : Lv. ${g.training || '-'}</span></div>
+          <div class="guild-line"><span>공개 상태 : ${g.open ? '공개' : '비공개'}</span></div>
+          <div class="guild-line"><span>왕실풀확 : ${g.royalFull ? g.royalFull : '-'}</span></div>
+          <div class="guild-line"><span>문의톡 : ${g.note || '-'}</span></div>
+        </div>
+      `;
+    });
+  }
+
+  function toggleBookmark(name) {
+    let bookmarks = JSON.parse(localStorage.getItem("bookmarks") || "[]");
+    if (bookmarks.includes(name)) {
+      bookmarks = bookmarks.filter(n => n !== name);
+    } else {
+      bookmarks.push(name);
+    }
+    localStorage.setItem("bookmarks", JSON.stringify(bookmarks));
+
+    // 북마크 보기 중이면 다시 필터링된 목록으로 보여주기
+    if (isBookmarkMode) {
+      showBookmarks();
+    } else {
+      displayGuilds(filteredGuilds);
+    }
+  }
+
+  document.getElementById("level").addEventListener("keyup", function (event) {
     if (event.key === "Enter") {
       document.getElementById("investment").focus();
     }
   });
 
-  document.getElementById("investment").addEventListener("keyup", function(event) {
+  document.getElementById("investment").addEventListener("keyup", function (event) {
     if (event.key === "Enter") {
       filterGuilds();
     }
