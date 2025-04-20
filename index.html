@@ -64,6 +64,7 @@
       width: auto;
       display: inline-block;
       margin-right: 5px;
+      margin-bottom: 5px;
     }
   </style>
 </head>
@@ -71,7 +72,7 @@
   <div class="container">
     <div class="card">
       <h2>길드 조건 검색기</h2>
-      <input type="number" id="level" placeholder="현재 레벨을 입력하세요">
+      <input type="text" id="level" placeholder="현재 레벨을 입력하세요">
       <input type="text" id="investment" placeholder="현재 투자금 (숫자만 입력)" oninput="formatInvestment(this)">
       <button onclick="filterGuilds()">길드 검색</button>
     </div>
@@ -80,13 +81,14 @@
       <div class="sort-buttons">
         <button onclick="sortGuilds('investmentAsc')">투자금 낮은 순</button>
         <button onclick="sortGuilds('investmentDesc')">투자금 높은 순</button>
+        <button onclick="sortGuilds('levelAsc')">레벨 낮은 순</button>
+        <button onclick="sortGuilds('levelDesc')">레벨 높은 순</button>
       </div>
-      <div id="guild-list"></div> <!-- 길드 목록이 표시될 영역 -->
+      <div id="guild-list"></div>
     </div>
   </div>
 
   <script>
-    // 천 단위 쉼표를 넣은 실제 투자금 값 저장용 변수
     let investmentValue = 0;
 
     function formatInvestment(input) {
@@ -147,14 +149,15 @@
       { name: "so happy", level: 1, investment: 0, open: true, royalFull: "", note: "" }
     ];
 
-    let filteredGuilds = []; // 검색 결과 저장
+    let filteredGuilds = [];
 
     function filterGuilds() {
-      const level = parseInt(document.getElementById("level").value, 10);
+      const levelInput = document.getElementById("level").value.replace(/[^0-9]/g, '');
+      const level = parseInt(levelInput || '0', 10);
       const investment = investmentValue;
       const resultDiv = document.getElementById("results");
       const guildListDiv = document.getElementById("guild-list");
-      guildListDiv.innerHTML = ''; // 이전 결과 초기화
+      guildListDiv.innerHTML = '';
 
       filteredGuilds = guilds.filter(g => level >= g.level && investment >= g.investment);
 
@@ -192,21 +195,23 @@
       });
     }
 
-
     function sortGuilds(sortBy) {
       if (sortBy === 'investmentAsc') {
         filteredGuilds.sort((a, b) => a.investment - b.investment);
       } else if (sortBy === 'investmentDesc') {
         filteredGuilds.sort((a, b) => b.investment - a.investment);
+      } else if (sortBy === 'levelAsc') {
+        filteredGuilds.sort((a, b) => a.level - b.level);
+      } else if (sortBy === 'levelDesc') {
+        filteredGuilds.sort((a, b) => b.level - a.level);
       }
-      displayGuilds(filteredGuilds); // 정렬 후 결과 표시
+      displayGuilds(filteredGuilds);
     }
 
-
-    // 엔터키 이벤트 처리
+    // Enter 키 동작
     document.getElementById("level").addEventListener("keyup", function(event) {
       if (event.key === "Enter") {
-        filterGuilds();
+        document.getElementById("investment").focus();
       }
     });
 
@@ -215,7 +220,6 @@
         filterGuilds();
       }
     });
-
   </script>
 </body>
 </html>
