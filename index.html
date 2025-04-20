@@ -66,6 +66,10 @@
       margin-right: 5px;
       margin-bottom: 5px;
     }
+    .sort-buttons button.active {
+      background-color: #dabfff;
+      color: #000;
+    }
   </style>
 </head>
 <body>
@@ -79,10 +83,10 @@
     <div id="results" class="card" style="display: none;">
       <h2>검색 결과</h2>
       <div class="sort-buttons">
-        <button onclick="sortGuilds('investmentAsc')">투자금 낮은 순</button>
-        <button onclick="sortGuilds('investmentDesc')">투자금 높은 순</button>
         <button onclick="sortGuilds('levelAsc')">레벨 낮은 순</button>
         <button onclick="sortGuilds('levelDesc')">레벨 높은 순</button>
+        <button onclick="sortGuilds('investmentAsc')">투자금 낮은 순</button>
+        <button onclick="sortGuilds('investmentDesc')">투자금 높은 순</button>
       </div>
       <div id="guild-list"></div>
     </div>
@@ -205,10 +209,16 @@
       } else if (sortBy === 'levelDesc') {
         filteredGuilds.sort((a, b) => b.level - a.level);
       }
+
+      document.querySelectorAll('.sort-buttons button').forEach(btn => {
+        btn.classList.remove('active');
+      });
+      const activeBtn = document.querySelector(`.sort-buttons button[onclick="sortGuilds('${sortBy}')"]`);
+      if (activeBtn) activeBtn.classList.add('active');
+
       displayGuilds(filteredGuilds);
     }
 
-    // Enter 키 동작
     document.getElementById("level").addEventListener("keyup", function(event) {
       if (event.key === "Enter") {
         document.getElementById("investment").focus();
