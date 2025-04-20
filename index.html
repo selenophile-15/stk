@@ -14,22 +14,22 @@
     .container {
       max-width: 700px;
       margin: auto;
-	    padding-right: 20px;
-      box-sizing: border-box; /* 추가 */
+      padding-right: 20px;
+      box-sizing: border-box;
     }
     .card {
       background: #2b2b3c;
       border-radius: 12px;
       padding: 20px;
       margin-top: 20px;
-      box-sizing: border-box; /* 추가 */
+      box-sizing: border-box;
     }
     input, button {
-      width: calc(100% - 0px); /* 변경 */
+      width: 100%;
       padding: 10px;
       margin-top: 10px;
       font-size: 1rem;
-	  box-sizing: border-box; /* 추가 */
+      box-sizing: border-box;
     }
     button {
       background-color: #6a0dad;
@@ -74,57 +74,10 @@
       background-color: #dabfff;
       color: #000;
     }
-    .warning-toggle {
-      cursor: pointer;
-      color: #dabfff;
-      font-weight: bold;
-      margin-bottom: 10px;
-      display: inline-block;
-    }
-    .warning-box {
-      display: none;
-      background-color: #3a3a4d;
-      border: 1px solid #555;
-      border-radius: 10px;
-      padding: 15px;
-      margin-bottom: 15px;
-      white-space: pre-line;
-    }
-    .warning-title { /* 추가된 스타일 */
-      font-weight: bold;
-      color: red;
-    }
-    .creator { /* 추가된 스타일 */
-      font-size: 0.8rem;
-      color: #888;
-      text-align: left;
-    }
   </style>
 </head>
 <body>
-  <div class="creator">제작자 : 셀레노필</div> <!-- 추가된 제작자 표시 -->
   <div class="container">
-
-    <!-- 📌 접었다 펴는 경고문 -->
-    <div class="card">
-      <div class="warning-toggle" onclick="toggleWarning()">▶ 주의사항 보기</div>
-      <div class="warning-box" id="warning-box">
-        <span class="warning-title"># 샵타이탄 국내 길드 리스트 관련 주의사항</span>
-        제가 정리한 데이터에는 건물들 최저 레벨 및 최대 레벨, 훈련소 레벨, 길드장, 단톡 필참 여부 등 정보가 있지만 여기에는 표시하지 않았습니다.
-        길드 건물들 레벨 정보를 넣으면 길드들 순위 매기는 것처럼 보여 불쾌해 하시는 분들도 있을 수 있다 판단하여 가입 조건만 넣었으니 사용 시 불편해도 양해바랍니다.
-        길드 레벨, 건물들 레벨, 길드 인원 현황 같은 부분까지는 제가 매번 파악할 수 없기 때문에 직접 검색해서 확인해야 합니다.
-        제가 길드 가입 조건을 확인했을 때 수작업으로 입력하는 시스템이기 때문에 몇몇 길드들 가입 조건이 변경되어도 업데이트가 되어있지 않을 수 있습니다.
-        비공개 길드는 검색해도 나오지 않기 때문에 월챗에 홍보글 올라오는 것을 기다리세요.
-
-        본인이 가입하고 싶은 길드가 사람 꽉 차서 홍보도 안 하는 중인데 그 길드 관계자들 불러서 누구 추방하고 자기 넣어달라거나 그냥 넣어달라고 자꾸 떼쓰거나 자기 현재 상태보다 훨씬 높은 조건을 요구하는 길드 문의 톡방에 찾아가 계속 넣어달라고 하면서 불편하게 만들지 마세요.
-        길드에 공석이 있어도 따로 홍보하지 않는 길드들이 있고 어느 정도 성장 후 길드 이적을 원하는 유저들의 편의를 위해 만들었지만 위와 같은 일이 벌어진다면 부작용이 크다고 판단해 이 사이트 없애 버릴 겁니다.
-
-        만약 여기에 없는 길드들인데 등록되길 원한다거나 레벨, 투자금 조건 등 데이터 빨리 바꾸고 싶은 분들은 아래의 링크에 댓글 달아주세요.
-        '허락받으면 카페에 이 사이트 올린 게시글 링크 추가 못 받으면 뭐...혼자 쓰는 거공'
-        <a href="https://cafe.naver.com/shoptitan/951" target="_blank">댓글 다는 곳 (임시)</a>
-      </div>
-    </div>
-
     <div class="card">
       <h2>샵타이탄 국내 길드 리스트</h2>
       <input type="number" id="level" placeholder="현재 레벨을 입력하세요">
@@ -139,6 +92,7 @@
         <button onclick="sortGuilds('levelDesc')">레벨 조건 높은 순</button>
         <button onclick="sortGuilds('investmentAsc')">투자금 조건 낮은 순</button>
         <button onclick="sortGuilds('investmentDesc')">투자금 조건 높은 순</button>
+        <button onclick="sortGuilds('trainingDesc')">훈련소 레벨 높은 순</button>
       </div>
       <div id="guild-list"></div>
     </div>
@@ -153,65 +107,59 @@
       input.value = investmentValue.toLocaleString();
     }
 
-    function toggleWarning() {
-      const box = document.getElementById("warning-box");
-      const toggle = document.querySelector(".warning-toggle");
-      const isVisible = box.style.display === "block";
-      box.style.display = isVisible ? "none" : "block";
-      toggle.textContent = isVisible ? "▶ 주의사항 보기" : "▼ 주의사항 닫기";
-    }
+const guilds = [
+  { name: "가죽공방", level: 78, investment: 500000000000, open: true, royalFull: "", note: "하드캐리 가입?", training: 40 },
+  { name: "거상", level: 1, investment: 0, open: false, royalFull: "왕실, 풀확", note: "", training: 40 },
+  { name: "고양이는 진리다", level: 50, investment: 0, open: false, royalFull: "", note: "고양이=진리", training: 40 },
+  { name: "광고상단", level: 55, investment: 5000000000, open: true, royalFull: "", note: "", training: 40 },
+  { name: "꽃의향기", level: 10, investment: 0, open: true, royalFull: "", note: "", training: 31 },
+  { name: "노블레스", level: 70, investment: 0, open: false, royalFull: "", note: "", training: 40 },
+  { name: "노인정", level: 65, investment: 20000000000, open: true, royalFull: "", note: "", training: 40 },
+  { name: "눈꽃s", level: 30, investment: 0, open: true, royalFull: "", note: "", training: 40 },
+  { name: "뉴타운", level: 85, investment: 200000000000, open: false, royalFull: "", note: "songseven", training: 40 },
+  { name: "다이써", level: 65, investment: 10000000000, open: true, royalFull: "", note: "", training: 40 },
+  { name: "단밤", level: 68, investment: 90000000000, open: true, royalFull: "", note: "shop작업원", training: 40 },
+  { name: "달빛 주점", level: 30, investment: 2500000, open: true, royalFull: "", note: "", training: 31 },
+  { name: "독도는 우리땅", level: 30, investment: 0, open: false, royalFull: "왕실", note: "", training: 40 },
+  { name: "땡땡글", level: 25, investment: 0, open: true, royalFull: "", note: "", training: 37 },
+  { name: "만덕상회", level: 30, investment: 30000000, open: true, royalFull: "", note: "", training: 23 },
+  { name: "미실코타탈프핑", level: 30, investment: 80000000000, open: true, royalFull: "", note: "", training: 40 },
+  { name: "미야요", level: 36, investment: 0, open: true, royalFull: "", note: "", training: 40 },
+  { name: "발렌타인", level: 50, investment: 100000000000, open: false, royalFull: "", note: "샵타이탄 발렌타인", training: 40 },
+  { name: "베스트샵", level: 5, investment: 0, open: true, royalFull: "", note: "", training: 40 },
+  { name: "별빛 여관", level: 1, investment: 0, open: true, royalFull: "", note: "", training: 21 },
+  { name: "샵다이서", level: 1, investment: 0, open: true, royalFull: "", note: "", training: 29 },
+  { name: "샵타벅스", level: 60, investment: 50000000000, open: true, royalFull: "", note: "", training: 40 },
+  { name: "소백당", level: 59, investment: 100000000000, open: true, royalFull: "", note: "소백금강", training: 40 },
+  { name: "스키다시", level: 60, investment: 10000000000, open: true, royalFull: "", note: "", training: 40 },
+  { name: "시리우스", level: 50, investment: 5000000000, open: true, royalFull: "", note: "", training: 40 },
+  { name: "신비의세계", level: 5, investment: 0, open: true, royalFull: "", note: "", training: 37 },
+  { name: "연보라", level: 60, investment: 100000000000, open: true, royalFull: "", note: "", training: 40 },
+  { name: "올드타운", level: 70, investment: 100000000000, open: true, royalFull: "", note: "", training: 40 },
+  { name: "우리 공방", level: 68, investment: 200000000000, open: true, royalFull: "", note: "", training: 40 },
+  { name: "웃딘상회", level: 40, investment: 100000000, open: true, royalFull: "", note: "", training: 31 },
+  { name: "일단아무길드", level: 30, investment: 3000000000, open: false, royalFull: "", note: "", training: 40 },
+  { name: "지상낙원", level: 58, investment: 10000000000, open: true, royalFull: "", note: "", training: 40 },
+  { name: "초보라", level: 30, investment: 0, open: true, royalFull: "", note: "", training: 19 },
+  { name: "캐슬휘닉스더퍼스트", level: 1, investment: 15000000000, open: true, royalFull: "", note: "타이길구함", training: 40 },
+  { name: "캐시맥스", level: 65, investment: 180000000000, open: true, royalFull: "", note: "하드캐리 가입?", training: 40 },
+  { name: "하드캐리", level: 80, investment: 49894989, open: true, royalFull: "", note: "하드캐리 가입", training: 40 },
+  { name: "한강번지점프장", level: 35, investment: 0, open: true, royalFull: "", note: "", training: 40 },
+  { name: "한인타운", level: 83, investment: 100000000000, open: false, royalFull: "", note: "밥먹는곰", training: 40 },
+  { name: "호화로운 길드", level: 88, investment: 500000000000, open: true, royalFull: "", note: "", training: 40 },
+  { name: "헤스티아", level: 5, investment: 50000, open: true, royalFull: "", note: "", training: 33 },
+  { name: "Best Of Me", level: 82, investment: 100000000000, open: true, royalFull: "", note: "", training: 40 },
+  { name: "Bongha Guild", level: 1, investment: 100000000, open: true, royalFull: "", note: "", training: 29 },
+  { name: "choco k", level: 58, investment: 0, open: true, royalFull: "", note: "", training: 40 },
+  { name: "DOKDO", level: 1, investment: 10000000, open: true, royalFull: "", note: "", training: 35 },
+  { name: "E편한길드", level: 55, investment: 500000000, open: true, royalFull: "", note: "", training: 40 },
+  { name: "hybrid shop", level: 1, investment: 0, open: true, royalFull: "", note: "", training: 29 },
+  { name: "KOREAQUEEN", level: 40, investment: 5000000000, open: true, royalFull: "", note: "", training: 40 },
+  { name: "kr.리치", level: 4, investment: 1000, open: true, royalFull: "", note: "", training: 27 },
+  { name: "so happy", level: 1, investment: 0, open: true, royalFull: "", note: "", training: 37 }
+];
 
-    const guilds = [
-      { name: "가죽공방", level: 78, investment: 500000000000, open: true, royalFull: "", note: "하드캐리 가입?" },
-      { name: "거상", level: 1, investment: 0, open: false, royalFull: "왕실, 풀확", note: "" },
-      { name: "고양이는 진리다", level: 50, investment: 0, open: false, royalFull: "", note: "고양이=진리" },
-      { name: "광고상단", level: 55, investment: 5000000000, open: true, royalFull: "", note: "" },
-      { name: "꽃의향기", level: 10, investment: 0, open: true, royalFull: "", note: "" },
-      { name: "노블레스", level: 70, investment: 0, open: false, royalFull: "", note: "" },
-      { name: "노인정", level: 65, investment: 20000000000, open: true, royalFull: "", note: "" },
-      { name: "눈꽃s", level: 30, investment: 0, open: true, royalFull: "", note: "" },
-      { name: "뉴타운", level: 85, investment: 200000000000, open: false, royalFull: "", note: "songseven" },
-      { name: "다이써", level: 65, investment: 10000000000, open: true, royalFull: "", note: "" },
-      { name: "단밤", level: 68, investment: 90000000000, open: true, royalFull: "", note: "shop작업원" },
-      { name: "달빛 주점", level: 30, investment: 2500000, open: true, royalFull: "", note: "" },
-      { name: "독도는 우리땅", level: 30, investment: 0, open: false, royalFull: "왕실", note: "" },
-      { name: "땡땡글", level: 25, investment: 0, open: true, royalFull: "", note: "" },
-      { name: "만덕상회", level: 30, investment: 30000000, open: true, royalFull: "", note: "" },
-      { name: "미실코타탈프핑", level: 30, investment: 80000000000, open: true, royalFull: "", note: "" },
-      { name: "미야요", level: 36, investment: 0, open: true, royalFull: "", note: "" },
-      { name: "발렌타인", level: 50, investment: 100000000000, open: false, royalFull: "", note: "샵타이탄 발렌타인" },
-      { name: "베스트샵", level: 5, investment: 0, open: true, royalFull: "", note: "" },
-      { name: "별빛 여관", level: 1, investment: 0, open: true, royalFull: "", note: "" },
-      { name: "샵다이서", level: 1, investment: 0, open: true, royalFull: "", note: "" },
-      { name: "샵타벅스", level: 60, investment: 50000000000, open: true, royalFull: "", note: "" },
-      { name: "소백당", level: 59, investment: 100000000000, open: true, royalFull: "", note: "소백금강" },
-      { name: "스키다시", level: 60, investment: 10000000000, open: true, royalFull: "", note: "" },
-      { name: "시리우스", level: 50, investment: 5000000000, open: true, royalFull: "", note: "" },
-      { name: "신비의세계", level: 5, investment: 0, open: true, royalFull: "", note: "" },
-      { name: "연보라", level: 60, investment: 100000000000, open: true, royalFull: "", note: "" },
-      { name: "올드타운", level: 70, investment: 100000000000, open: true, royalFull: "", note: "" },
-      { name: "우리 공방", level: 68, investment: 200000000000, open: true, royalFull: "", note: "" },
-      { name: "웃딘상회", level: 40, investment: 100000000, open: true, royalFull: "", note: "" },
-      { name: "일단아무길드", level: 30, investment: 3000000000, open: false, royalFull: "", note: "" },
-      { name: "지상낙원", level: 58, investment: 10000000000, open: true, royalFull: "", note: "" },
-      { name: "초보라", level: 30, investment: 0, open: true, royalFull: "", note: "" },
-      { name: "캐슬휘닉스더퍼스트", level: 1, investment: 15000000000, open: true, royalFull: "", note: "타이길구함" },
-      { name: "캐시맥스", level: 65, investment: 180000000000, open: true, royalFull: "", note: "하드캐리 가입?" },
-      { name: "하드캐리", level: 80, investment: 49894989, open: true, royalFull: "", note: "하드캐리 가입" },
-      { name: "한강번지점프장", level: 35, investment: 0, open: true, royalFull: "", note: "" },
-      { name: "한인타운", level: 83, investment: 100000000000, open: false, royalFull: "", note: "밥먹는곰" },
-      { name: "호화로운 길드", level: 88, investment: 500000000000, open: true, royalFull: "", note: "" },
-      { name: "헤스티아", level: 5, investment: 50000, open: true, royalFull: "", note: "" },
-      { name: "Best Of Me", level: 82, investment: 100000000000, open: true, royalFull: "", note: "" },
-      { name: "Bongha Guild", level: 1, investment: 100000000, open: true, royalFull: "", note: "" },
-      { name: "choco k", level: 58, investment: 0, open: true, royalFull: "", note: "" },
-      { name: "DOKDO", level: 1, investment: 10000000, open: true, royalFull: "", note: "" },
-      { name: "E편한길드", level: 55, investment: 500000000, open: true, royalFull: "", note: "" },
-      { name: "hybrid shop", level: 1, investment: 0, open: true, royalFull: "", note: "" },
-      { name: "KOREAQUEEN", level: 40, investment: 5000000000, open: true, royalFull: "", note: "" },
-      { name: "kr.리치", level: 4, investment: 1000, open: true, royalFull: "", note: "" },
-      { name: "so happy", level: 1, investment: 0, open: true, royalFull: "", note: "" }
-    ];
+
 
 
     let filteredGuilds = [];
@@ -237,7 +185,6 @@
 
     function displayGuilds(guildsToDisplay) {
       const guildListDiv = document.getElementById("guild-list");
-      guildListDiv.innerHTML
       guildListDiv.innerHTML = '';
 
       guildsToDisplay.forEach(g => {
@@ -250,6 +197,9 @@
               <span>투자금 조건 : ${g.investment.toLocaleString()} 골드</span>
             </div>
             <div class="guild-line">
+              <span>훈련소 (영웅 최대 레벨) : Lv. ${g.training || '-'}</span>
+			</div>
+            <div class="guild-line">			
               <span>공개 상태 : ${g.open ? '공개' : '비공개'}</span>
               <span>/</span>
               <span>왕실풀확 : ${g.royalFull ? g.royalFull : '-'}</span>
@@ -270,6 +220,8 @@
         filteredGuilds.sort((a, b) => a.level - b.level);
       } else if (sortBy === 'levelDesc') {
         filteredGuilds.sort((a, b) => b.level - a.level);
+      } else if (sortBy === 'trainingDesc') {
+        filteredGuilds.sort((a, b) => (b.training || 0) - (a.training || 0));
       }
 
       document.querySelectorAll('.sort-buttons button').forEach(btn => {
