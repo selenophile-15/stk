@@ -59,14 +59,50 @@
     }
     .comment {
       background: #444;
-      padding: 10px;
       border-radius: 8px;
       margin-top: 10px;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+    }
+    .comment-content {
+      padding: 10px;
+      flex: 1;
+    }
+    .delete-btn {
+      width: 40px;
+      height: 100%;
+      background-color: #6a0dad;
+      color: white;
+      border: none;
+      border-left: 1px solid #222;
+      cursor: pointer;
+      border-radius: 0 8px 8px 0;
     }
     .small-text {
       font-size: 0.8rem;
       color: #ccc;
       margin-top: 5px;
+    }
+	textarea#message {
+      font-family: 'Arial', sans-serif;
+      background-color: #3a3a4d;
+      color: white;
+      border: 1px solid #555;
+      border-radius: 8px;
+      resize: vertical;
+	}
+    .guild-name {
+      display: inline-block; /* 이름과 북마크 아이콘을 같은 줄에 표시 */
+    }
+
+    .bookmark-icon {
+      background: none;
+      border: none;
+      color: gold;
+      font-size: 1.2em;
+      cursor: pointer;
+      margin-left: 5px; /* 이름과의 간격 조절 */
     }
   </style>
 </head>
@@ -78,11 +114,18 @@
       <input type="text" id="name" placeholder="이름" />
       <input type="number" id="level" placeholder="레벨" />
       <input type="text" id="investment" placeholder="투자금" />
-      <input type="text" id="royal" placeholder="왕실풀확 상태" />
+      <input type="text" id="royal" placeholder="왕실풀확 상태 (예: 왕실풀확, 왕실, 풀확, 해당사항 없음)" />
       <input type="text" id="contact" placeholder="연락 방법 (예: 인게임 월챗, 오픈톡 링크 등)" />
-      <textarea id="message" placeholder="하고싶은 말"></textarea>
-      <div class="small-text">하고싶은 말을 제외한 항목들은 필수 입력 항목이며 하나라도 적지않을 경우 등록할 수 없습니다.</div>
+      <textarea id="message" placeholder="하고 싶은 말 (유료 일꾼 구매, 이벤트 점수, 원하는 길드 조건 등 하고 싶은 말 있으면 적으세요)"></textarea>
+      <input type="password" id="postPassword" placeholder="비밀번호 (수정/삭제 시 필요)" />
+      <div class="small-text">
+		하고 싶은 말을 제외한 항목들은 필수 입력 항목이며 하나라도 적지않을 경우 등록할 수 없습니다.<br>
+		글은 7일 동안만 유지되며 기간 만료 시 자동 삭제됩니다.<br>
+		글이 이미 등록된 유저는 삭제를 하지 않는 이상 재등록이 불가하니 본인 글 찾아가 수정 혹은 삭제를 하세요.
+	  </div>
       <button onclick="submitPost()">등록</button>
+	  <button onclick="renderPosts()">전체 글 보기</button>
+      <button onclick="renderPosts(true)">북마크한 글 보기</button>
     </div>
     <div id="posts"></div>
   </div>
@@ -99,32 +142,64 @@
 
   <script>
     let posts = JSON.parse(localStorage.getItem("guildPosts") || "[]");
-    let commentsMap = JSON.parse(localStorage.getItem("guildComments") || "{}")
+    let commentsMap = JSON.parse(localStorage.getItem("guildComments") || "{}");
+    let passwords = JSON.parse(localStorage.getItem("guildPasswords") || "{}");
+    let commentPasswords = JSON.parse(localStorage.getItem("commentPasswords") || "{}");
+	let bookmarks = JSON.parse(localStorage.getItem("guildBookmarks") || "[]");
     let currentPostId = null;
+	let showOnlyBookmarks = false;
 
     function saveData() {
       localStorage.setItem("guildPosts", JSON.stringify(posts));
       localStorage.setItem("guildComments", JSON.stringify(commentsMap));
+      localStorage.setItem("guildPasswords", JSON.stringify(passwords));
+      localStorage.setItem("commentPasswords", JSON.stringify(commentPasswords));
+	  localStorage.setItem("guildBookmarks", JSON.stringify(bookmarks));
     }
 
-    function renderPosts() {
+    function renderPosts(bookmarksOnly = false) {
+      showOnlyBookmarks = bookmarksOnly;
       const now = Date.now();
-      posts = posts.filter(post => now - post.timestamp < 5 * 86400000); // 5일 유지
+      posts = posts.filter(post => now - post.timestamp < 5 * 86400000);
       saveData();
 
       const container = document.getElementById("posts");
       container.innerHTML = "";
-      [...posts].reverse().forEach(post => {
+
+      const filteredPosts = bookmarksOnly ? posts.filter(post => bookmarks.includes(post.id)) : posts;
+
+      [...filteredPosts].reverse().forEach(post => {
         const commentCount = commentsMap[post.id]?.length || 0;
-        const daysLeft = 5 - Math.floor((now - post.timestamp) / 86400000);
+        const timeLeft = 5 * 86400000 - (now - post.timestamp);
+        const days = Math.floor(timeLeft / 86400000);
+        const hours = Math.floor((timeLeft % 86400000) / 3600000);
+        const minutes = Math.floor((timeLeft % 3600000) / 60000);
+        const isBookmarked = bookmarks.includes(post.id);
+
         container.innerHTML += `
           <div class="post" onclick="openPost('${post.id}')">
-            <div><strong>${post.name}</strong> | 레벨 ${post.level} | 투자금 ${post.investment} | 남은일 ${daysLeft}일</div>
+            <div>
+              <div class="guild-name">
+                ${post.name}&nbsp;&nbsp;<span class="bookmark-icon" onclick="toggleBookmark(event, '${post.id}')">${isBookmarked ? '★' : '☆'}</span>
+              </div>
+            </div>
+            <div>레벨: ${post.level} / 투자금: ${post.investment} / ${post.royal}</div>
+                        <div>삭제까지 ${days}일 ${hours}시간 ${minutes}분</div>
             <div>댓글 ${commentCount}개</div>
-          </div>
         `;
       });
     }
+
+	function toggleBookmark(event, postId) {
+		event.stopPropagation(); // 상위 div의 onclick 이벤트 막기
+		if (bookmarks.includes(postId)) {
+			bookmarks = bookmarks.filter(id => id !== postId);
+		} else {
+			bookmarks.push(postId);
+		}
+		saveData();
+		renderPosts(showOnlyBookmarks);
+	}
 
     function submitPost() {
       const name = document.getElementById("name").value.trim();
@@ -133,8 +208,9 @@
       const royal = document.getElementById("royal").value;
       const contact = document.getElementById("contact").value;
       const message = document.getElementById("message").value;
+      const pw = document.getElementById("postPassword").value;
 
-      if (!name || !level || !investment || !royal || !contact) {
+      if (!name || !level || !investment || !royal || !contact || !pw) {
         alert("모든 필수 항목을 입력해주세요.");
         return;
       }
@@ -145,9 +221,12 @@
       const post = {
         id: Date.now().toString(),
         name, level, investment, royal, contact, message,
-        timestamp: Date.now()
+        timestamp: Date.now(),
+		bookmarked: false // 북마크 초기값 설정
       };
       posts.push(post);
+      passwords[post.id] = pw;
+	  bookmarks = bookmarks.filter(id => posts.find(post => post.id === id)); // posts에 있는 id만 유지
       saveData();
       renderPosts();
     }
@@ -166,35 +245,96 @@
           <div>왕실풀확 상태: ${post.royal}</div>
           <div>연락 방법: ${post.contact}</div>
           <div>하고싶은 말:<br/>${post.message}</div>
+          <button onclick="editPostForm()">글 수정</button>
+          <button onclick="deletePost()">글 삭제</button>
         </div>
       `;
       renderComments();
+    }
+
+    function editPostForm() {
+      const pw = prompt("글 비밀번호를 입력하세요:");
+      if (pw !== passwords[currentPostId]) {
+        alert("비밀번호가 틀렸습니다.");
+        return;
+      }
+      const post = posts.find(p => p.id === currentPostId);
+      const level = prompt("레벨:", post.level);
+      const investment = prompt("투자금:", post.investment);
+      const royal = prompt("왕실풀확 상태:", post.royal);
+      const contact = prompt("연락 방법:", post.contact);
+      const message = prompt("하고싶은 말:", post.message);
+
+      if (level && investment && royal && contact && message !== null) {
+        post.level = level;
+        post.investment = investment;
+        post.royal = royal;
+        post.contact = contact;
+        post.message = message;
+        saveData();
+        openPost(currentPostId);
+      }
+    }
+
+    function deletePost() {
+      const inputPw = prompt("글 비밀번호를 입력하세요:");
+      if (inputPw === passwords[currentPostId]) {
+        posts = posts.filter(p => p.id !== currentPostId);
+        delete passwords[currentPostId];
+        delete commentsMap[currentPostId];
+        delete commentPasswords[currentPostId];
+		bookmarks = bookmarks.filter(id => id !== currentPostId); // 북마크에서도 제거
+        saveData();
+        goToBoard();
+      } else {
+        alert("비밀번호가 틀렸습니다.");
+      }
     }
 
     function renderComments() {
       const commentsDiv = document.getElementById("comments");
       const comments = commentsMap[currentPostId] || [];
       commentsDiv.innerHTML = "";
-      comments.forEach(c => {
-        commentsDiv.innerHTML += `<div class="comment">${c}</div>`;
+      comments.forEach((c, i) => {
+        commentsDiv.innerHTML += `
+          <div class="comment">
+            <div class="comment-content">${c.text}</div>
+            <button class="delete-btn" onclick="deleteComment(${i})">X</button>
+          </div>
+        `;
       });
     }
 
     function addComment() {
       const text = document.getElementById("new-comment").value.trim();
-      if (!text) return;
+      const pw = prompt("댓글 비밀번호를 입력하세요:");
+      if (!text || !pw) return;
       if (!commentsMap[currentPostId]) commentsMap[currentPostId] = [];
-      commentsMap[currentPostId].push(text);
+      if (!commentPasswords[currentPostId]) commentPasswords[currentPostId] = [];
+      commentsMap[currentPostId].push({ text });
+      commentPasswords[currentPostId].push(pw);
       document.getElementById("new-comment").value = "";
       saveData();
       renderComments();
       renderPosts();
     }
 
-    function goBack() {
-      location.href = "https://selenophile-15.github.io/stk/"; // 메인 사이트의 절대 경로
+    function deleteComment(index) {
+      const inputPw = prompt("댓글 비밀번호를 입력하세요:");
+      if (inputPw === commentPasswords[currentPostId][index]) {
+        commentsMap[currentPostId].splice(index, 1);
+        commentPasswords[currentPostId].splice(index, 1);
+        saveData();
+        renderComments();
+        renderPosts();
+      } else {
+        alert("비밀번호가 틀렸습니다.");
+      }
     }
 
+    function goBack() {
+      location.href = "https://selenophile-15.github.io/stk/";
+    }
 
     function goToBoard() {
       document.getElementById("main-view").style.display = "block";
@@ -206,4 +346,3 @@
   </script>
 </body>
 </html>
-
