@@ -1,0 +1,221 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>길드 조건 검색기</title>
+  <style>
+    body {
+      font-family: 'Arial', sans-serif;
+      padding: 20px;
+      background: #1e1e2f;
+      color: white;
+    }
+    .container {
+      max-width: 700px;
+      margin: auto;
+    }
+    .card {
+      background: #2b2b3c;
+      border-radius: 12px;
+      padding: 20px;
+      margin-top: 20px;
+    }
+    input, button {
+      width: 100%;
+      padding: 10px;
+      margin-top: 10px;
+      font-size: 1rem;
+    }
+    button {
+      background-color: #6a0dad;
+      color: white;
+      border: none;
+      border-radius: 8px;
+      cursor: pointer;
+    }
+    button:hover {
+      background-color: #8b4ee7;
+    }
+    .guild-box {
+      margin-top: 16px;
+      padding: 16px;
+      border: 1px solid #444;
+      border-radius: 10px;
+      background-color: #3a3a4d;
+    }
+    .guild-name {
+      font-size: 1.2rem;
+      font-weight: bold;
+      margin-bottom: 8px;
+    }
+    .guild-line {
+      margin-bottom: 4px;
+      font-size: 0.95rem;
+    }
+    .guild-line span {
+      display: inline-block;
+      margin-right: 12px;
+    }
+    .sort-buttons {
+      margin-top: 10px;
+    }
+    .sort-buttons button {
+      width: auto;
+      display: inline-block;
+      margin-right: 5px;
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <div class="card">
+      <h2>길드 조건 검색기</h2>
+      <input type="number" id="level" placeholder="현재 레벨을 입력하세요">
+      <input type="text" id="investment" placeholder="현재 투자금 (숫자만 입력)" oninput="formatInvestment(this)">
+      <button onclick="filterGuilds()">길드 검색</button>
+    </div>
+    <div id="results" class="card" style="display: none;">
+      <h2>검색 결과</h2>
+      <div class="sort-buttons">
+        <button onclick="sortGuilds('investmentAsc')">투자금 낮은 순</button>
+        <button onclick="sortGuilds('investmentDesc')">투자금 높은 순</button>
+      </div>
+      <div id="guild-list"></div> <!-- 길드 목록이 표시될 영역 -->
+    </div>
+  </div>
+
+  <script>
+    // 천 단위 쉼표를 넣은 실제 투자금 값 저장용 변수
+    let investmentValue = 0;
+
+    function formatInvestment(input) {
+      const raw = input.value.replace(/[^0-9]/g, '');
+      investmentValue = parseInt(raw || '0', 10);
+      input.value = investmentValue.toLocaleString();
+    }
+
+    const guilds = [
+      { name: "가족공방", level: 78, investment: 500000000000, open: true, royalFull: "", note: "하드캐리 가입" },
+      { name: "거상", level: 1, investment: 0, open: false, royalFull: "왕실, 풀확", note: "" },
+      { name: "고양이는 진리다", level: 50, investment: 0, open: false, royalFull: "", note: "고양이=진리" },
+      { name: "광고상단", level: 55, investment: 5000000000, open: true, royalFull: "", note: "" },
+      { name: "꽃의향기", level: 10, investment: 0, open: true, royalFull: "", note: "" },
+      { name: "노블레스", level: 70, investment: 0, open: false, royalFull: "", note: "" },
+      { name: "노인정", level: 65, investment: 20000000000, open: true, royalFull: "", note: "" },
+      { name: "눈꽃s", level: 30, investment: 0, open: true, royalFull: "", note: "" },
+      { name: "뉴타운", level: 85, investment: 200000000000, open: false, royalFull: "", note: "songseven" },
+      { name: "다이써", level: 65, investment: 10000000000, open: true, royalFull: "", note: "" },
+      { name: "단발", level: 68, investment: 90000000000, open: true, royalFull: "", note: "shop작업원" },
+      { name: "달빛 주점", level: 30, investment: 2500000, open: true, royalFull: "", note: "" },
+      { name: "독도는 우리땅", level: 30, investment: 0, open: false, royalFull: "왕실", note: "" },
+      { name: "땡땡글", level: 25, investment: 0, open: true, royalFull: "", note: "" },
+      { name: "만덕상회", level: 30, investment: 30000000, open: true, royalFull: "", note: "" },
+      { name: "미실코타탈프핑", level: 30, investment: 80000000000, open: true, royalFull: "", note: "" },
+      { name: "미야요", level: 36, investment: 0, open: true, royalFull: "", note: "" },
+      { name: "발렌타인", level: 50, investment: 100000000000, open: false, royalFull: "", note: "샵타이탄 발렌타인" },
+      { name: "베스트샵", level: 5, investment: 0, open: true, royalFull: "", note: "" },
+      { name: "별빛 여관", level: 1, investment: 0, open: true, royalFull: "", note: "" },
+      { name: "샵다이서", level: 1, investment: 0, open: true, royalFull: "", note: "" },
+      { name: "샵타벅스", level: 60, investment: 50000000000, open: true, royalFull: "", note: "" },
+      { name: "소백당", level: 59, investment: 100000000000, open: true, royalFull: "", note: "소백금강" },
+      { name: "스키다시", level: 60, investment: 10000000000, open: true, royalFull: "", note: "" },
+      { name: "시리우스", level: 50, investment: 5000000000, open: true, royalFull: "", note: "" },
+      { name: "신비의세계", level: 5, investment: 0, open: true, royalFull: "", note: "" },
+      { name: "연보라", level: 60, investment: 100000000000, open: true, royalFull: "", note: "" },
+      { name: "올드타운", level: 70, investment: 100000000000, open: true, royalFull: "", note: "" },
+      { name: "우리 공방", level: 68, investment: 200000000000, open: true, royalFull: "", note: "" },
+      { name: "웃딘상회", level: 40, investment: 100000000, open: true, royalFull: "", note: "" },
+      { name: "일단아무길드", level: 30, investment: 3000000000, open: false, royalFull: "", note: "" },
+      { name: "지상낙원", level: 58, investment: 10000000000, open: true, royalFull: "", note: "" },
+      { name: "초보라", level: 30, investment: 0, open: true, royalFull: "", note: "" },
+      { name: "캐슬휘닉스더퍼스트", level: 1, investment: 15000000000, open: true, royalFull: "", note: "타이길구함" },
+      { name: "캐시맥스", level: 65, investment: 180000000000, open: true, royalFull: "", note: "하드캐리 가입" },
+      { name: "하드캐리", level: 80, investment: 49894989, open: true, royalFull: "", note: "하드캐리 가입" },
+      { name: "한강번지점프장", level: 35, investment: 0, open: true, royalFull: "", note: "" },
+      { name: "한인타운", level: 83, investment: 100000000000, open: false, royalFull: "", note: "밥먹는곰" },
+      { name: "호화로운 길드", level: 88, investment: 500000000000, open: true, royalFull: "", note: "" },
+      { name: "Best Of Me", level: 82, investment: 100000000000, open: true, royalFull: "", note: "" },
+      { name: "Bongha Guild", level: 1, investment: 100000000, open: true, royalFull: "", note: "" },
+      { name: "choco k", level: 58, investment: 0, open: true, royalFull: "", note: "" },
+      { name: "DOKDO", level: 1, investment: 10000000, open: true, royalFull: "", note: "" },
+      { name: "E편한길드", level: 55, investment: 500000000, open: true, royalFull: "", note: "" },
+      { name: "hybrid shop", level: 1, investment: 0, open: true, royalFull: "", note: "" },
+      { name: "KOREAQUEEN", level: 40, investment: 5000000000, open: true, royalFull: "", note: "" },
+      { name: "kr.리치", level: 4, investment: 1000, open: true, royalFull: "", note: "" },
+      { name: "norguil", level: 1, investment: 0, open: true, royalFull: "", note: "" },
+      { name: "so happy", level: 1, investment: 0, open: true, royalFull: "", note: "" }
+    ];
+
+    let filteredGuilds = []; // 검색 결과 저장
+
+    function filterGuilds() {
+      const level = parseInt(document.getElementById("level").value, 10);
+      const investment = investmentValue;
+      const resultDiv = document.getElementById("results");
+      const guildListDiv = document.getElementById("guild-list");
+      guildListDiv.innerHTML = ''; // 이전 결과 초기화
+
+      filteredGuilds = guilds.filter(g => level >= g.level && investment >= g.investment);
+
+      if (filteredGuilds.length === 0) {
+        guildListDiv.innerHTML = '<p>조건에 맞는 길드가 없습니다.</p>';
+      } else {
+        displayGuilds(filteredGuilds);
+      }
+
+      resultDiv.style.display = 'block';
+    }
+
+    function displayGuilds(guildsToDisplay) {
+      const guildListDiv = document.getElementById("guild-list");
+      guildListDiv.innerHTML = '';
+
+      guildsToDisplay.forEach(g => {
+        guildListDiv.innerHTML += `
+          <div class="guild-box">
+            <div class="guild-name">${g.name}</div>
+            <div class="guild-line">
+              <span>레벨 조건 : ${g.level}</span>
+              <span>/</span>
+              <span>투자금 조건 : ${g.investment.toLocaleString()} 원</span>
+            </div>
+            <div class="guild-line">
+              <span>공개 상태 : ${g.open ? '공개' : '비공개'}</span>
+              <span>/</span>
+              <span>왕실풀확 : ${g.royalFull ? g.royalFull : '-'}</span>
+              <span>/</span>
+              <span>문의톡 : ${g.note || '-'}</span>
+            </div>
+          </div>
+        `;
+      });
+    }
+
+
+    function sortGuilds(sortBy) {
+      if (sortBy === 'investmentAsc') {
+        filteredGuilds.sort((a, b) => a.investment - b.investment);
+      } else if (sortBy === 'investmentDesc') {
+        filteredGuilds.sort((a, b) => b.investment - a.investment);
+      }
+      displayGuilds(filteredGuilds); // 정렬 후 결과 표시
+    }
+
+
+    // 엔터키 이벤트 처리
+    document.getElementById("level").addEventListener("keyup", function(event) {
+      if (event.key === "Enter") {
+        filterGuilds();
+      }
+    });
+
+    document.getElementById("investment").addEventListener("keyup", function(event) {
+      if (event.key === "Enter") {
+        filterGuilds();
+      }
+    });
+
+  </script>
+</body>
+</html>
