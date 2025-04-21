@@ -21,7 +21,7 @@
       padding: 20px;
       margin-top: 20px;
     }
-    input, textarea, select, button {
+    input, textarea, button {
       width: 100%;
       padding: 10px;
       margin-top: 10px;
@@ -35,6 +35,11 @@
       border-radius: 8px;
       cursor: pointer;
     }
+    .small-text {
+      font-size: 0.8rem;
+      color: #ccc;
+      margin-top: 5px;
+    }
     button:hover {
       background-color: #8b4ee7;
     }
@@ -46,45 +51,13 @@
       margin-top: 15px;
       cursor: pointer;
     }
-    .back-button {
-      background: none;
-      color: white;
-      font-size: 1.2rem;
-      border: none;
-      cursor: pointer;
-      margin-bottom: 10px;
-    }
-    .comment-box {
-      margin-top: 20px;
-    }
     .comment {
       background: #444;
       border-radius: 8px;
-      margin-top: 10px;
-      display: flex;
-      justify-content: space-between;
-      align-items: center;
-    }
-    .comment-content {
       padding: 10px;
-      flex: 1;
+      margin-top: 10px;
     }
-    .delete-btn {
-      width: 40px;
-      height: 100%;
-      background-color: #6a0dad;
-      color: white;
-      border: none;
-      border-left: 1px solid #222;
-      cursor: pointer;
-      border-radius: 0 8px 8px 0;
-    }
-    .small-text {
-      font-size: 0.8rem;
-      color: #ccc;
-      margin-top: 5px;
-    }
-    textarea#message {
+	textarea#message {
       font-family: 'Arial', sans-serif;
       background-color: #3a3a4d;
       color: white;
@@ -92,36 +65,25 @@
       border-radius: 8px;
       resize: vertical;
     }
-    .guild-name {
-      display: inline-block;
-    }
-    .bookmark-icon {
-      background: none;
-      border: none;
-      color: gold;
-      font-size: 1.2em;
-      cursor: pointer;
-      margin-left: 5px;
-    }
   </style>
 </head>
 <body>
   <div class="container">
     <div class="card">
-      <h2>길드 구해요 게시판</h2>
-      <input type="text" id="name" placeholder="이름" />
-      <input type="number" id="level" placeholder="레벨" />
-      <input type="text" id="investment" placeholder="투자금" />
-      <input type="text" id="royal" placeholder="왕실풀확 상태" />
-      <input type="text" id="contact" placeholder="연락 방법" />
-      <textarea id="message" placeholder="하고 싶은 말"></textarea>
-      <button onclick="submitPost()">등록</button>
-      <button onclick="renderPosts()">전체 글 보기</button>
-      <button onclick="renderPosts(true)">북마크 보기</button>
-      <div class="small-text">
-        하고 싶은 말을 제외한 항목들은 필수 입력 항목이며 하나라도 적지않을 경우 등록할 수 없습니다.<br>
-        글은 5일 동안만 유지되며 기간 만료 시 자동 삭제됩니다.<br>
-        글이 이미 등록된 유저는 삭제를 하지 않는 이상 재등록이 불가하니 본인 글 찾아가 수정 혹은 삭제를 하세요.
+	  <h2>길드 구해요 게시판</h2>
+	  <input type="text" id="name" placeholder="이름" />
+	  <input type="number" id="level" placeholder="레벨" />
+	  <input type="text" id="investment" placeholder="투자금" />
+	  <input type="text" id="royal" placeholder="왕실풀확 상태" />
+	  <input type="text" id="contact" placeholder="연락 방법" />
+	  <textarea id="message" placeholder="하고 싶은 말"></textarea>
+	  <button onclick="submitPost()">등록</button>
+	  <button onclick="renderPosts()">전체 글 보기</button>
+	  <button onclick="renderPosts(true)">북마크 보기</button>
+	  <div class="small-text">
+	    하고 싶은 말을 제외한 항목들은 필수 입력 항목이며 하나라도 적지않을 경우 등록할 수 없습니다.<br>
+	    글은 5일 동안만 유지되며 기간 만료 시 자동 삭제됩니다.<br>
+	    글이 이미 등록된 유저는 삭제를 하지 않는 이상 재등록이 불가하니 본인 글 찾아가 수정 혹은 삭제를 하세요.
       </div>
     </div>
     <div id="posts"></div>
@@ -129,8 +91,7 @@
 
   <script type="module">
     import { initializeApp } from "https://www.gstatic.com/firebasejs/10.11.0/firebase-app.js";
-    import { getDatabase, ref, push, onValue, remove, update } from "https://www.gstatic.com/firebasejs/10.11.0/firebase-database.js";
-    import { getAuth, signInAnonymously, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/10.11.0/firebase-auth.js";
+    import { getDatabase, ref, push, onValue, update } from "https://www.gstatic.com/firebasejs/10.11.0/firebase-database.js";
 
     const firebaseConfig = {
       apiKey: "AIzaSyC-jlwSZPIt8aq9Tx2aJ8_0u4f_R7BFxR8",
@@ -142,102 +103,70 @@
 
     const app = initializeApp(firebaseConfig);
     const db = getDatabase(app);
-    const auth = getAuth(app);
 
-    let userId = null;
-    let bookmarks = JSON.parse(localStorage.getItem("guildBookmarks") || "[]");
-    let showOnlyBookmarks = false;
+    function submitPost() {
+	  const name = document.getElementById("name").value.trim();
+      const level = document.getElementById("level").value;
+      const investment = document.getElementById("investment").value;
+      const royal = document.getElementById("royal").value;
+      const contact = document.getElementById("contact").value;
+      const message = document.getElementById("message").value;
 
-    signInAnonymously(auth);
-    onAuthStateChanged(auth, (user) => {
-      if (user) {
-        userId = user.uid;
-        renderPosts();
-      }
-    });
+      if (!name || !level || !investment || !royal || !contact) {
+        alert("모든 필수 항목을 입력해주세요.");
+        return;
+	  }
 
-  function submitPost() {
-    const name = document.getElementById("name").value.trim();
-    const level = document.getElementById("level").value;
-    const investment = document.getElementById("investment").value;
-    const royal = document.getElementById("royal").value;
-    const contact = document.getElementById("contact").value;
-    const message = document.getElementById("message").value;
+	  const postData = {
+		name, level, investment, royal, contact, message,
+		userId, timestamp: Date.now()
+	  };
 
-    if (!name || !level || !investment || !royal || !contact) {
-      alert("모든 필수 항목을 입력해주세요.");
-      return;
-    }
+	  push(ref(db, "posts"), postData);
+	}
 
-    const postData = {
-      name, level, investment, royal, contact, message,
-      userId, timestamp: Date.now()
-    };
-
-  // 글 Firebase에 저장
-  push(ref(db, "posts"), postData)
-    .then(() => {
-      // 입력 필드 초기화
-      document.getElementById("name").value = "";
-      document.getElementById("level").value = "";
-      document.getElementById("investment").value = "";
-      document.getElementById("royal").value = "";
-      document.getElementById("contact").value = "";
-      document.getElementById("message").value = "";
-
-      alert("글이 성공적으로 등록되었습니다!");
-      renderPosts();
-    })
-    .catch((error) => {
-      alert("등록 중 오류가 발생했습니다: " + error.message);
-    });
-}
-
-    function renderPosts(bookmarksOnly = false) {
-      showOnlyBookmarks = bookmarksOnly;
-      const now = Date.now();
-      onValue(ref(db, "posts"), snapshot => {
-        const container = document.getElementById("posts");
-        container.innerHTML = "";
+    function renderPosts() {
+      const container = document.getElementById("posts");
+      container.innerHTML = "";
+      onValue(ref(db, 'posts'), snapshot => {
         const data = snapshot.val();
         if (!data) return;
-
+        container.innerHTML = "";
         Object.entries(data).reverse().forEach(([id, post]) => {
-          if ((now - post.timestamp > 5 * 86400000) || (bookmarksOnly && !bookmarks.includes(id))) return;
-          const timeLeft = 5 * 86400000 - (now - post.timestamp);
-          const days = Math.floor(timeLeft / 86400000);
-          const hours = Math.floor((timeLeft % 86400000) / 3600000);
-          const minutes = Math.floor((timeLeft % 3600000) / 60000);
-          const isBookmarked = bookmarks.includes(id);
-
-          const postDiv = document.createElement("div");
-          postDiv.className = "post";
-          postDiv.innerHTML = `
-            <div class="name">
-              ${post.name} <span class="bookmark" onclick="toggleBookmark('${id}', event)">${isBookmarked ? '★' : '☆'}</span>
-            </div>
-            <div>레벨: ${post.level} / 투자금: ${post.investment} / ${post.royal}</div>
-            <div>삭제까지 ${days}일 ${hours}시간 ${minutes}분</div>
+          const div = document.createElement("div");
+          div.className = "post";
+          div.innerHTML = `
+            <div><strong>${post.author}</strong></div>
+            <div>${post.content}</div>
+            <div><input type="text" id="comment-${id}" placeholder="댓글 입력"><button onclick="addComment('${id}')">댓글</button></div>
+            <div id="comments-${id}"></div>
           `;
-          container.appendChild(postDiv);
+          if (post.comments) {
+            post.comments.forEach(c => {
+              const cDiv = document.createElement("div");
+              cDiv.className = "comment";
+              cDiv.textContent = c;
+              div.querySelector(`#comments-${id}`).appendChild(cDiv);
+            });
+          }
+          container.appendChild(div);
         });
-        localStorage.setItem("guildBookmarks", JSON.stringify(bookmarks));
       });
     }
 
-    window.toggleBookmark = function(id, event) {
-      event.stopPropagation();
-      const index = bookmarks.indexOf(id);
-      if (index > -1) {
-        bookmarks.splice(index, 1);
-      } else {
-        bookmarks.push(id);
-      }
-      localStorage.setItem("guildBookmarks", JSON.stringify(bookmarks));
-      renderPosts(showOnlyBookmarks);
+    window.addComment = function(id) {
+      const input = document.getElementById(`comment-${id}`);
+      const text = input.value.trim();
+      if (!text) return;
+      onValue(ref(db, 'posts/' + id + '/comments'), snapshot => {
+        const comments = snapshot.val() || [];
+        comments.push(text);
+        update(ref(db, 'posts/' + id), { comments });
+      }, { onlyOnce: true });
+      input.value = '';
     }
 
-    window.renderPosts = renderPosts;
+    renderPosts();
   </script>
 </body>
 </html>
