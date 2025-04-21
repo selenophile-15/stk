@@ -68,6 +68,7 @@
 </head>
 <body>
   <div class="container">
+    <button onclick="goBack()" style="background:none;color:white;border:none;font-size:1.2rem;cursor:pointer">← 뒤로가기</button>
     <div class="card">
       <h2>길드 구해요 게시판</h2>
       <input type="text" id="name" placeholder="이름" />
@@ -90,7 +91,7 @@
 
   <script type="module">
     import { initializeApp } from "https://www.gstatic.com/firebasejs/10.11.0/firebase-app.js";
-    import { getDatabase, ref, push, onValue, update, get, query, orderByChild, equalTo, remove } from "https://www.gstatic.com/firebasejs/10.11.0/firebase-database.js";
+    import { getDatabase, ref, push, onValue, update, remove } from "https://www.gstatic.com/firebasejs/10.11.0/firebase-database.js";
 
     const firebaseConfig = {
       apiKey: "AIzaSyC-jlwSZPIt8aq9Tx2aJ8_0u4f_R7BFxR8",
@@ -103,7 +104,7 @@
     const app = initializeApp(firebaseConfig);
     const db = getDatabase(app);
 
-    async function submitPost() {
+    function submitPost() {
       const name = document.getElementById("name").value.trim();
       const level = document.getElementById("level").value;
       const investment = document.getElementById("investment").value;
@@ -117,35 +118,24 @@
         return;
       }
 
-      const nameQuery = query(ref(db, "posts"), orderByChild("name"), equalTo(name));
-      const snapshot = await get(nameQuery);
-
-      if (snapshot.exists()) {
-        alert("이미 등록된 유저입니다. 글 수정이나 삭제를 먼저 해주세요.");
-        return;
-      }
-
       const postData = {
         name, level, investment, royal, contact, message, password,
         timestamp: Date.now()
       };
 
       push(ref(db, "posts"), postData);
-      alert("등록되었습니다.");
     }
 
     function renderPosts() {
       const container = document.getElementById("posts");
       container.innerHTML = "";
       const now = Date.now();
-
       onValue(ref(db, 'posts'), snapshot => {
         const data = snapshot.val();
         if (!data) return;
 
         Object.entries(data).reverse().forEach(([id, post]) => {
           if (now - post.timestamp > 5 * 86400000) return;
-
           const timeLeft = 5 * 86400000 - (now - post.timestamp);
           const days = Math.floor(timeLeft / 86400000);
           const hours = Math.floor((timeLeft % 86400000) / 3600000);
@@ -154,12 +144,11 @@
           const div = document.createElement("div");
           div.className = "post";
           div.innerHTML = `
-            <div class="name">${post.name}</div>
+            <div><strong>${post.name}</strong></div>
             <div>레벨: ${post.level} / 투자금: ${post.investment} / ${post.royal}</div>
             <div>연락 방법: ${post.contact}</div>
             <div>하고 싶은 말: ${post.message}</div>
             <div>삭제까지 ${days}일 ${hours}시간 ${minutes}분</div>
-            <input type="password" id="pw-${id}" placeholder="비밀번호 입력" />
             <button onclick="deletePost('${id}')">삭제</button>
           `;
           container.appendChild(div);
@@ -167,23 +156,21 @@
       });
     }
 
-    window.deletePost = function (id) {
-      const pwInput = document.getElementById(`pw-${id}`);
-      const password = pwInput.value;
-      if (!password) return alert("비밀번호를 입력하세요.");
-
-      const postRef = ref(db, `posts/${id}`);
-      get(postRef).then(snapshot => {
-        if (!snapshot.exists()) return;
+    window.deletePost = function(id) {
+      const inputPw = prompt("비밀번호를 입력하세요:");
+      onValue(ref(db, 'posts/' + id), snapshot => {
         const post = snapshot.val();
-        if (post.password !== password) {
-          alert("비밀번호가 일치하지 않습니다.");
-          return;
+        if (inputPw === post.password) {
+          remove(ref(db, 'posts/' + id));
+          renderPosts();
+        } else {
+          alert("비밀번호가 틀렸습니다.");
         }
-        if (confirm("정말 삭제하시겠습니까?")) {
-          remove(postRef);
-        }
-      });
+      }, { onlyOnce: true });
+    }
+
+    window.goBack = function() {
+      window.location.href = "https://selenophile-15.github.io/stk/";
     }
 
     renderPosts();
