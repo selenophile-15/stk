@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>길드 구해요 게시판(작동 X, 구현하려 시도 중)</title>
+  <title>길드 구해요 게시판</title>
   <style>
     body {
       font-family: 'Arial', sans-serif;
@@ -35,21 +35,11 @@
       border-radius: 8px;
       cursor: pointer;
     }
-    .small-text {
-      font-size: 0.8rem;
-      color: #ccc;
-      margin-top: 5px;
-    }
-    button:hover {
-      background-color: #8b4ee7;
-    }
-    .post {
+    .post, .detail {
       background-color: #3a3a4d;
-      border: 1px solid #444;
       border-radius: 10px;
       padding: 15px;
       margin-top: 15px;
-      cursor: pointer;
     }
     .comment {
       background: #444;
@@ -57,27 +47,38 @@
       padding: 10px;
       margin-top: 10px;
     }
-    textarea#message {
-      font-family: 'Arial', sans-serif;
-      background-color: #3a3a4d;
+    .comment .delete-btn {
+      float: right;
+      cursor: pointer;
+      color: red;
+      font-weight: bold;
+    }
+    .small-text {
+      font-size: 0.8rem;
+      color: #ccc;
+      margin-top: 10px;
+    }
+    .back-button {
+      background: none;
       color: white;
-      border: 1px solid #555;
-      border-radius: 8px;
-      resize: vertical;
+      font-size: 1.2rem;
+      border: none;
+      cursor: pointer;
+      margin-bottom: 10px;
     }
   </style>
 </head>
 <body>
-  <div class="container">
+  <div class="container" id="main-view">
+    <button class="back-button" onclick="goBack()">← 뒤로가기</button>
     <div class="card">
-      <h2>길드 구해요 게시판</h2>
-      <input type="text" id="name" placeholder="이름" />
-      <input type="number" id="level" placeholder="레벨" />
-      <input type="text" id="investment" placeholder="투자금" />
-      <input type="text" id="royal" placeholder="왕실풀확 상태" />
-      <input type="text" id="contact" placeholder="연락 방법" />
-      <textarea id="message" placeholder="하고 싶은 말"></textarea>
-      <input type="password" id="password" placeholder="비밀번호 (수정/삭제용)" />
+      <input type="text" id="name" placeholder="이름 (필수)" required />
+      <input type="number" id="level" placeholder="레벨 (필수)" required />
+      <input type="text" id="investment" placeholder="투자금 (필수)" required />
+      <input type="text" id="royal" placeholder="왕실풀확 상태 (필수)" required />
+      <input type="text" id="contact" placeholder="연락 방법 (필수)" required />
+      <textarea id="message" placeholder="하고 싶은 말 (선택)"></textarea>
+      <input type="password" id="password" placeholder="비밀번호 (필수)" required />
       <button onclick="submitPost()">등록</button>
       <button onclick="renderPosts()">전체 글 보기</button>
       <button onclick="renderPosts(true)">북마크 보기</button>
@@ -90,94 +91,209 @@
     <div id="posts"></div>
   </div>
 
+  <div class="container" id="detail-view" style="display:none">
+    <button class="back-button" onclick="goToBoard()">← 게시판으로</button>
+    <div id="post-detail"></div>
+    <div class="card">
+      <textarea id="new-comment" placeholder="댓글을 입력하세요"></textarea>
+      <button onclick="addComment()">댓글 등록</button>
+      <div id="comments"></div>
+    </div>
+  </div>
+
   <script type="module">
     import { initializeApp } from "https://www.gstatic.com/firebasejs/10.11.0/firebase-app.js";
-    import { getDatabase, ref, push, onValue, update } from "https://www.gstatic.com/firebasejs/10.11.0/firebase-database.js";
+    import { getDatabase, ref, push, onValue, remove, update } from "https://www.gstatic.com/firebasejs/10.11.0/firebase-database.js";
 
     const firebaseConfig = {
-
+      apiKey: "AIzaSyC-jlwSZPIt8aq9Tx2aJ8_0u4f_R7BFxR8",
+      authDomain: "stkguild-b2b17.firebaseapp.com",
+      databaseURL: "https://stkguild-b2b17-default-rtdb.firebaseio.com",
+      projectId: "stkguild-b2b17",
+      appId: "1:483792187181:web:8d1e6401cc6de5aee4eda4"
+    };
 
     const app = initializeApp(firebaseConfig);
     const db = getDatabase(app);
 
-    function submitPost() {
+    let selectedPostId = null;
+    let bookmarks = JSON.parse(localStorage.getItem("guildBookmarks") || "[]");
+
+    function saveBookmarks() {
+      localStorage.setItem("guildBookmarks", JSON.stringify(bookmarks));
+    }
+
+    window.goBack = function () {
+      location.href = "https://selenophile-15.github.io/stk/";
+    };
+
+    window.goToBoard = function () {
+      document.getElementById("main-view").style.display = "block";
+      document.getElementById("detail-view").style.display = "none";
+      renderPosts();
+    };
+
+    window.submitPost = function () {
       const name = document.getElementById("name").value.trim();
-      const level = document.getElementById("level").value;
-      const investment = document.getElementById("investment").value;
-      const royal = document.getElementById("royal").value;
-      const contact = document.getElementById("contact").value;
-      const message = document.getElementById("message").value;
-      const password = document.getElementById("password").value;
+      const level = document.getElementById("level").value.trim();
+      const investment = document.getElementById("investment").value.trim();
+      const royal = document.getElementById("royal").value.trim();
+      const contact = document.getElementById("contact").value.trim();
+      const message = document.getElementById("message").value.trim();
+      const password = document.getElementById("password").value.trim();
 
       if (!name || !level || !investment || !royal || !contact || !password) {
-        alert("모든 필수 항목을 입력해주세요.");
+        alert("필수 항목을 모두 입력해주세요.");
         return;
       }
 
-      const postData = {
-        name, level, investment, royal, contact, message, password,
-        timestamp: Date.now()
-      };
-
-      push(ref(db, "posts"), postData).then(() => {
-        alert("글이 등록되었습니다.");
+      push(ref(db, "posts"), {
+        name, level, investment, royal, contact, message,
+        password, timestamp: Date.now(), comments: []
+      }).then(() => {
         renderPosts();
       });
-    }
+    };
 
-    function renderPosts() {
+    window.renderPosts = function (bookmarksOnly = false) {
       const container = document.getElementById("posts");
       container.innerHTML = "";
-      onValue(ref(db, 'posts'), snapshot => {
+      onValue(ref(db, "posts"), snapshot => {
+        const now = Date.now();
         const data = snapshot.val();
         if (!data) return;
-        container.innerHTML = "";
-        Object.entries(data).reverse().forEach(([id, post]) => {
-          const created = new Date(post.timestamp);
-          const now = new Date();
-          const remaining = Math.max(0, 5 * 24 * 60 * 60 * 1000 - (now - created));
-          const days = Math.floor(remaining / (24 * 60 * 60 * 1000));
-          const hours = Math.floor((remaining % (24 * 60 * 60 * 1000)) / (60 * 60 * 1000));
-          const minutes = Math.floor((remaining % (60 * 60 * 1000)) / (60 * 1000));
 
-          const div = document.createElement("div");
-          div.className = "post";
-          div.innerHTML = `
-            <strong>${post.name} ⭐</strong><br/>
-            레벨: ${post.level} / 투자금: ${post.investment} / ${post.royal}<br/>
-            연락: ${post.contact}<br/>
-            하고 싶은 말: ${post.message || "없음"}<br/>
-            삭제까지 ${days}일 ${hours}시간 ${minutes}분
-            <div style="margin-top: 10px;">
-              <input type="text" id="comment-${id}" placeholder="댓글 입력">
-              <button onclick="addComment('${id}')">댓글</button>
-              <div id="comments-${id}"></div>
-            </div>
-          `;
-          if (post.comments) {
-            post.comments.forEach(c => {
-              const cDiv = document.createElement("div");
-              cDiv.className = "comment";
-              cDiv.textContent = c;
-              div.querySelector(`#comments-${id}`).appendChild(cDiv);
-            });
+        Object.entries(data).reverse().forEach(([id, post]) => {
+          const timeLeft = 5 * 86400000 - (now - post.timestamp);
+          if (timeLeft <= 0) {
+            remove(ref(db, `posts/${id}`));
+            return;
           }
-          container.appendChild(div);
+          if (bookmarksOnly && !bookmarks.includes(id)) return;
+
+          const d = Math.floor(timeLeft / 86400000);
+          const h = Math.floor((timeLeft % 86400000) / 3600000);
+          const m = Math.floor((timeLeft % 3600000) / 60000);
+
+          const el = document.createElement("div");
+          el.className = "post";
+          el.innerHTML = `
+            <strong>${post.name}</strong> <span onclick="toggleBookmark('${id}', event)">${bookmarks.includes(id) ? '★' : '☆'}</span><br>
+            레벨: ${post.level} / 투자금: ${post.investment} / ${post.royal}<br>
+            삭제까지 ${d}일 ${h}시간 ${m}분<br>
+            댓글 ${post.comments?.length || 0}개
+          `;
+          el.onclick = () => openPost(id);
+          container.appendChild(el);
         });
+        saveBookmarks();
+      });
+    };
+
+    window.toggleBookmark = function (id, event) {
+      event.stopPropagation();
+      if (bookmarks.includes(id)) {
+        bookmarks = bookmarks.filter(b => b !== id);
+      } else {
+        bookmarks.push(id);
+      }
+      saveBookmarks();
+      renderPosts(true);
+    };
+
+    function openPost(id) {
+      selectedPostId = id;
+      document.getElementById("main-view").style.display = "none";
+      document.getElementById("detail-view").style.display = "block";
+      onValue(ref(db, `posts/${id}`), snap => {
+        const post = snap.val();
+        if (!post) return;
+        document.getElementById("post-detail").innerHTML = `
+          <div class="detail">
+            <strong>${post.name}</strong><br>
+            레벨: ${post.level}<br>
+            투자금: ${post.investment}<br>
+            왕실풀확 상태: ${post.royal}<br>
+            연락 방법: ${post.contact}<br>
+            하고 싶은 말:<br>${post.message}<br><br>
+            <button onclick="editPost()">글 수정</button>
+            <button onclick="deletePost()">글 삭제</button>
+          </div>
+        `;
+        renderComments(post.comments || []);
+      }, { onlyOnce: true });
+    }
+
+    function renderComments(comments) {
+      const container = document.getElementById("comments");
+      container.innerHTML = "";
+      comments.forEach((c, i) => {
+        const el = document.createElement("div");
+        el.className = "comment";
+        el.innerHTML = `${c.text} <span class="delete-btn" onclick="deleteComment(${i})">X</span>`;
+        container.appendChild(el);
       });
     }
 
-    window.addComment = function(id) {
-      const input = document.getElementById(`comment-${id}`);
-      const text = input.value.trim();
-      if (!text) return;
-      onValue(ref(db, 'posts/' + id + '/comments'), snapshot => {
-        const comments = snapshot.val() || [];
-        comments.push(text);
-        update(ref(db, 'posts/' + id), { comments });
+    window.addComment = function () {
+      const text = document.getElementById("new-comment").value.trim();
+      const pw = prompt("댓글 비밀번호를 입력하세요:");
+      if (!text || !pw) return;
+
+      onValue(ref(db, `posts/${selectedPostId}`), snap => {
+        const post = snap.val();
+        if (!post) return;
+        post.comments = post.comments || [];
+        post.comments.push({ text, pw });
+        update(ref(db, `posts/${selectedPostId}`), { comments: post.comments });
+        renderComments(post.comments);
+        document.getElementById("new-comment").value = "";
       }, { onlyOnce: true });
-      input.value = '';
-    }
+    };
+
+    window.deleteComment = function (index) {
+      const pw = prompt("댓글 비밀번호를 입력하세요:");
+      onValue(ref(db, `posts/${selectedPostId}`), snap => {
+        const post = snap.val();
+        if (!post || !post.comments?.[index]) return;
+        if (post.comments[index].pw === pw) {
+          post.comments.splice(index, 1);
+          update(ref(db, `posts/${selectedPostId}`), { comments: post.comments });
+          renderComments(post.comments);
+        } else {
+          alert("비밀번호가 틀렸습니다.");
+        }
+      }, { onlyOnce: true });
+    };
+
+    window.editPost = function () {
+      const pw = prompt("글 비밀번호를 입력하세요:");
+      onValue(ref(db, `posts/${selectedPostId}`), snap => {
+        const post = snap.val();
+        if (!post || post.password !== pw) return alert("비밀번호가 틀렸습니다.");
+        const level = prompt("레벨", post.level);
+        const investment = prompt("투자금", post.investment);
+        const royal = prompt("왕실풀확 상태", post.royal);
+        const contact = prompt("연락 방법", post.contact);
+        const message = prompt("하고 싶은 말", post.message);
+        update(ref(db, `posts/${selectedPostId}`), {
+          level, investment, royal, contact, message
+        });
+        alert("수정되었습니다.");
+        goToBoard();
+      }, { onlyOnce: true });
+    };
+
+    window.deletePost = function () {
+      const pw = prompt("글 비밀번호를 입력하세요:");
+      onValue(ref(db, `posts/${selectedPostId}`), snap => {
+        const post = snap.val();
+        if (!post || post.password !== pw) return alert("비밀번호가 틀렸습니다.");
+        remove(ref(db, `posts/${selectedPostId}`));
+        alert("삭제되었습니다.");
+        goToBoard();
+      }, { onlyOnce: true });
+    };
 
     renderPosts();
   </script>
