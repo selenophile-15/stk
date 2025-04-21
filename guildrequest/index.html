@@ -49,7 +49,6 @@
       border-radius: 10px;
       padding: 15px;
       margin-top: 15px;
-      cursor: pointer;
     }
     .comment {
       background: #444;
@@ -57,7 +56,7 @@
       padding: 10px;
       margin-top: 10px;
     }
-	textarea#message {
+    textarea#message {
       font-family: 'Arial', sans-serif;
       background-color: #3a3a4d;
       color: white;
@@ -70,21 +69,20 @@
 <body>
   <div class="container">
     <div class="card">
-	  <h2>길드 구해요 게시판</h2>
-	  <input type="text" id="name" placeholder="이름" />
-	  <input type="number" id="level" placeholder="레벨" />
-	  <input type="text" id="investment" placeholder="투자금" />
-	  <input type="text" id="royal" placeholder="왕실풀확 상태" />
-	  <input type="text" id="contact" placeholder="연락 방법" />
-	  <textarea id="message" placeholder="하고 싶은 말"></textarea>
-	  <input type="password" id="password" placeholder="비밀번호 (수정/삭제용)" />
-	  <button onclick="submitPost()">등록</button>
-	  <button onclick="renderPosts()">전체 글 보기</button>
-	  <button onclick="renderPosts(true)">북마크 보기</button>
-	  <div class="small-text">
-	    하고 싶은 말을 제외한 항목들은 필수 입력 항목이며 하나라도 적지않을 경우 등록할 수 없습니다.<br>
-	    글은 5일 동안만 유지되며 기간 만료 시 자동 삭제됩니다.<br>
-	    글이 이미 등록된 유저는 삭제를 하지 않는 이상 재등록이 불가하니 본인 글 찾아가 수정 혹은 삭제를 하세요.
+      <h2>길드 구해요 게시판</h2>
+      <input type="text" id="name" placeholder="이름" />
+      <input type="number" id="level" placeholder="레벨" />
+      <input type="text" id="investment" placeholder="투자금" />
+      <input type="text" id="royal" placeholder="왕실풀확 상태" />
+      <input type="text" id="contact" placeholder="연락 방법" />
+      <textarea id="message" placeholder="하고 싶은 말"></textarea>
+      <input type="password" id="password" placeholder="비밀번호 (수정/삭제용)" />
+      <button onclick="submitPost()">등록</button>
+      <button onclick="renderPosts()">전체 글 보기</button>
+      <div class="small-text">
+        하고 싶은 말을 제외한 항목들은 필수 입력 항목이며 하나라도 적지않을 경우 등록할 수 없습니다.<br>
+        글은 5일 동안만 유지되며 기간 만료 시 자동 삭제됩니다.<br>
+        글이 이미 등록된 유저는 삭제를 하지 않는 이상 재등록이 불가하니 본인 글 찾아가 수정 혹은 삭제를 하세요.
       </div>
     </div>
     <div id="posts"></div>
@@ -92,7 +90,7 @@
 
   <script type="module">
     import { initializeApp } from "https://www.gstatic.com/firebasejs/10.11.0/firebase-app.js";
-    import { getDatabase, ref, push, onValue, update } from "https://www.gstatic.com/firebasejs/10.11.0/firebase-database.js";
+    import { getDatabase, ref, push, onValue, update, get, query, orderByChild, equalTo, remove } from "https://www.gstatic.com/firebasejs/10.11.0/firebase-database.js";
 
     const firebaseConfig = {
       apiKey: "AIzaSyC-jlwSZPIt8aq9Tx2aJ8_0u4f_R7BFxR8",
@@ -105,66 +103,87 @@
     const app = initializeApp(firebaseConfig);
     const db = getDatabase(app);
 
-    function submitPost() {
+    async function submitPost() {
       const name = document.getElementById("name").value.trim();
       const level = document.getElementById("level").value;
       const investment = document.getElementById("investment").value;
       const royal = document.getElementById("royal").value;
       const contact = document.getElementById("contact").value;
       const message = document.getElementById("message").value;
+      const password = document.getElementById("password").value;
 
-      if (!name || !level || !investment || !royal || !contact) {
+      if (!name || !level || !investment || !royal || !contact || !password) {
         alert("모든 필수 항목을 입력해주세요.");
         return;
-	  }
+      }
 
-	  const postData = {
-		name, level, investment, royal, contact, message,
-		userId, timestamp: Date.now()
-	  };
+      const nameQuery = query(ref(db, "posts"), orderByChild("name"), equalTo(name));
+      const snapshot = await get(nameQuery);
 
-	  push(ref(db, "posts"), postData);
-	}
+      if (snapshot.exists()) {
+        alert("이미 등록된 유저입니다. 글 수정이나 삭제를 먼저 해주세요.");
+        return;
+      }
+
+      const postData = {
+        name, level, investment, royal, contact, message, password,
+        timestamp: Date.now()
+      };
+
+      push(ref(db, "posts"), postData);
+      alert("등록되었습니다.");
+    }
 
     function renderPosts() {
       const container = document.getElementById("posts");
       container.innerHTML = "";
+      const now = Date.now();
+
       onValue(ref(db, 'posts'), snapshot => {
         const data = snapshot.val();
         if (!data) return;
-        container.innerHTML = "";
+
         Object.entries(data).reverse().forEach(([id, post]) => {
+          if (now - post.timestamp > 5 * 86400000) return;
+
+          const timeLeft = 5 * 86400000 - (now - post.timestamp);
+          const days = Math.floor(timeLeft / 86400000);
+          const hours = Math.floor((timeLeft % 86400000) / 3600000);
+          const minutes = Math.floor((timeLeft % 3600000) / 60000);
+
           const div = document.createElement("div");
           div.className = "post";
           div.innerHTML = `
-            <div><strong>${post.author}</strong></div>
-            <div>${post.content}</div>
-            <div><input type="text" id="comment-${id}" placeholder="댓글 입력"><button onclick="addComment('${id}')">댓글</button></div>
-            <div id="comments-${id}"></div>
+            <div class="name">${post.name}</div>
+            <div>레벨: ${post.level} / 투자금: ${post.investment} / ${post.royal}</div>
+            <div>연락 방법: ${post.contact}</div>
+            <div>하고 싶은 말: ${post.message}</div>
+            <div>삭제까지 ${days}일 ${hours}시간 ${minutes}분</div>
+            <input type="password" id="pw-${id}" placeholder="비밀번호 입력" />
+            <button onclick="deletePost('${id}')">삭제</button>
           `;
-          if (post.comments) {
-            post.comments.forEach(c => {
-              const cDiv = document.createElement("div");
-              cDiv.className = "comment";
-              cDiv.textContent = c;
-              div.querySelector(`#comments-${id}`).appendChild(cDiv);
-            });
-          }
           container.appendChild(div);
         });
       });
     }
 
-    window.addComment = function(id) {
-      const input = document.getElementById(`comment-${id}`);
-      const text = input.value.trim();
-      if (!text) return;
-      onValue(ref(db, 'posts/' + id + '/comments'), snapshot => {
-        const comments = snapshot.val() || [];
-        comments.push(text);
-        update(ref(db, 'posts/' + id), { comments });
-      }, { onlyOnce: true });
-      input.value = '';
+    window.deletePost = function (id) {
+      const pwInput = document.getElementById(`pw-${id}`);
+      const password = pwInput.value;
+      if (!password) return alert("비밀번호를 입력하세요.");
+
+      const postRef = ref(db, `posts/${id}`);
+      get(postRef).then(snapshot => {
+        if (!snapshot.exists()) return;
+        const post = snapshot.val();
+        if (post.password !== password) {
+          alert("비밀번호가 일치하지 않습니다.");
+          return;
+        }
+        if (confirm("정말 삭제하시겠습니까?")) {
+          remove(postRef);
+        }
+      });
     }
 
     renderPosts();
